@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 280 25% 95%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 280 25% 95%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 280 25% 95%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 280 25% 90%;
+    --input: 280 25% 90%;
+    --ring: 0 84% 60%;
+    --radius: 1.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 0 84% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom WellnessGrid styles */
+.wellness-gradient {
+  background-color: #faf7f7;
+  background-image: linear-gradient(to bottom, #fff5f5, #faf7f7);
+}
+
+.wellness-card {
+  @apply bg-white border border-gray-100 rounded-3xl shadow-sm;
+}
+
+.wellness-button-primary {
+  @apply bg-red-500 hover:bg-red-600 text-white font-medium rounded-full transition-colors;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.wellness-button-secondary {
+  @apply bg-secondary hover:bg-secondary/80 text-gray-700 font-medium rounded-full transition-colors border border-gray-200;
+}
+
+.wellness-text-primary {
+  @apply text-gray-900 font-semibold;
+}
+
+.wellness-text-secondary {
+  @apply text-gray-600;
+}
+
+.wellness-text-accent {
+  @apply text-red-500;
+}
+
+.wellness-icon-container {
+  @apply w-12 h-12 rounded-2xl flex items-center justify-center;
+}
+
+.wellness-header {
+  @apply px-4 py-6 flex items-center justify-between bg-white/90 backdrop-blur-sm sticky top-0 z-10;
+}
+
+.wellness-scrollable-buttons {
+  @apply flex overflow-x-auto pb-2 space-x-2;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.wellness-scrollable-buttons::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+.wellness-action-button {
+  @apply px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200;
+}
+
+.wellness-popup-overlay {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+}
+
+.wellness-popup-content {
+  @apply bg-white rounded-3xl shadow-xl max-w-md w-full overflow-y-auto;
+  max-height: 90vh;
+}
+
+.wellness-tab-active {
+  @apply bg-white text-gray-900 shadow-sm;
+}
+
+.wellness-tab-inactive {
+  @apply text-red-500 hover:text-red-600 transition-colors;
+}
+
+.wellness-progress-bar {
+  @apply h-2 bg-red-100 rounded-full overflow-hidden;
+}
+
+.wellness-progress-value {
+  @apply h-full bg-red-500 rounded-full;
+}
+
+.wellness-input {
+  @apply rounded-2xl border-secondary bg-secondary/50 focus:border-red-200 focus:ring-red-200;
+}
+
+.wellness-feature-card {
+  @apply bg-white rounded-3xl p-4 border border-gray-100;
+}
+
+.wellness-symptom-item {
+  @apply bg-secondary rounded-2xl p-4 flex items-center space-x-3;
+}
+
+.wellness-chart-container {
+  @apply rounded-2xl p-6 relative;
+  background-color: #fff5f5;
+}
+
+.wellness-chart-line {
+  fill: none;
+  stroke: #b91c1c;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wellness-chart-area {
+  fill: #fecaca;
+  opacity: 0.3;
+}
+
+.wellness-nav-item {
+  @apply flex flex-col items-center justify-center text-xs transition-colors rounded-lg;
+}
+
+.wellness-nav-item-active {
+  @apply text-red-500;
+}
+
+.wellness-nav-item-inactive {
+  @apply text-gray-500 hover:text-gray-900;
+}
+
+.wellness-message-ai {
+  @apply bg-secondary text-gray-900 rounded-3xl p-4;
+}
+
+.wellness-message-user {
+  @apply bg-red-500 text-white rounded-3xl p-4;
+}
+
+.wellness-avatar {
+  @apply w-10 h-10 rounded-full overflow-hidden;
+}
+
+.wellness-metric-card {
+  @apply border-t border-gray-200 py-4;
+}
+
+.wellness-metric-value {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.wellness-metric-label {
+  @apply text-sm text-red-500;
+}
+
+.wellness-flagged-pattern {
+  @apply flex items-start space-x-4 bg-secondary rounded-3xl p-4 border border-gray-100;
+}
+
+.wellness-flagged-icon {
+  @apply w-16 h-16 rounded-xl flex items-center justify-center;
+}
+
+/* Animation utilities */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
