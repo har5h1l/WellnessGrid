@@ -36,7 +36,7 @@ export function ConditionIcon({ condition, size = 40, className = "" }: Conditio
   return (
     <div className={`relative ${className}`}>
       <Image
-        src={iconSrc || "/placeholder.svg"}
+        src={iconSrc || "/images/condition-default.png"}
         alt={`${condition} icon`}
         width={size}
         height={size}

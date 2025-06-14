@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useApp, useMedications } from "@/lib/store/enhanced-context"
-import { X, Pill } from "lucide-react"
+import { X, Pill, Settings, Plus, Trash2 } from "lucide-react"
+import Link from "next/link"
 
 interface MedicationLoggerProps {
   onClose: () => void
@@ -20,6 +23,13 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
   const [notes, setNotes] = useState("")
   const [sideEffects, setSideEffects] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showMedicationManager, setShowMedicationManager] = useState(false)
+  const [newMedication, setNewMedication] = useState({
+    name: "",
+    dosage: "",
+    frequency: "",
+    timeSlots: ["08:00"]
+  })
 
   const commonSideEffects = [
     "Nausea",
@@ -74,7 +84,33 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
     onClose()
   }
 
-  if (medications.length === 0) {
+  const handleAddMedication = () => {
+    if (!newMedication.name || !newMedication.dosage || !newMedication.frequency) return
+
+    actions.addMedication({
+      name: newMedication.name,
+      dosage: newMedication.dosage,
+      frequency: newMedication.frequency,
+      timeSlots: newMedication.timeSlots,
+      adherence: 0,
+      sideEffects: [],
+      isActive: true
+    })
+
+    setNewMedication({
+      name: "",
+      dosage: "",
+      frequency: "",
+      timeSlots: ["08:00"]
+    })
+    setShowMedicationManager(false)
+  }
+
+  const handleRemoveMedication = (medicationId: string) => {
+    actions.removeMedication(medicationId)
+  }
+
+  if (medications.length === 0 && !showMedicationManager) {
     return (
       <div className="wellness-popup-overlay" onClick={onClose}>
         <div className="wellness-popup-content" onClick={(e) => e.stopPropagation()}>
@@ -82,18 +118,148 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Pill className="w-5 h-5" />
-                Log Medication
+                Medication Manager
               </CardTitle>
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="w-4 h-4" />
               </Button>
             </CardHeader>
             <CardContent className="text-center py-8">
-              <p className="text-gray-600 mb-4">No medications found in your profile.</p>
-              <p className="text-sm text-gray-500">Add medications in your profile settings to start tracking.</p>
-              <Button onClick={onClose} className="mt-4 wellness-button-primary">
-                Close
+              <div className="mb-6">
+                <Pill className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 mb-2">No medications found in your profile.</p>
+                <p className="text-sm text-gray-500">Add medications to start tracking adherence.</p>
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setShowMedicationManager(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Medication
+                </Button>
+                <Button onClick={onClose} className="flex-1 wellness-button-primary">
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Show medication manager
+  if (showMedicationManager) {
+    return (
+      <div className="wellness-popup-overlay" onClick={onClose}>
+        <div className="wellness-popup-content" onClick={(e) => e.stopPropagation()}>
+          <Card className="border-0 shadow-none">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Manage Medications
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-4 h-4" />
               </Button>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Existing medications */}
+              {medications.length > 0 && (
+                <div>
+                  <Label className="text-base font-medium">Current Medications</Label>
+                  <div className="space-y-2 mt-2">
+                    {medications.map((medication) => (
+                      <div
+                        key={medication.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div>
+                          <h4 className="font-medium text-gray-900">{medication.name}</h4>
+                          <p className="text-sm text-gray-600">{medication.dosage} - {medication.frequency}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMedication(medication.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add new medication form */}
+              <div>
+                <Label className="text-base font-medium">Add New Medication</Label>
+                <div className="space-y-4 mt-2">
+                  <div>
+                    <Label htmlFor="med-name">Medication Name</Label>
+                    <Input
+                      id="med-name"
+                      placeholder="e.g., Lisinopril"
+                      value={newMedication.name}
+                      onChange={(e) => setNewMedication(prev => ({ ...prev, name: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="med-dosage">Dosage</Label>
+                    <Input
+                      id="med-dosage"
+                      placeholder="e.g., 10mg"
+                      value={newMedication.dosage}
+                      onChange={(e) => setNewMedication(prev => ({ ...prev, dosage: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="med-frequency">Frequency</Label>
+                    <Select 
+                      value={newMedication.frequency} 
+                      onValueChange={(value) => setNewMedication(prev => ({ ...prev, frequency: value }))}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Once daily">Once daily</SelectItem>
+                        <SelectItem value="Twice daily">Twice daily</SelectItem>
+                        <SelectItem value="Three times daily">Three times daily</SelectItem>
+                        <SelectItem value="Four times daily">Four times daily</SelectItem>
+                        <SelectItem value="As needed">As needed</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex space-x-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setShowMedicationManager(false)}
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleAddMedication}
+                  disabled={!newMedication.name || !newMedication.dosage || !newMedication.frequency}
+                  className="flex-1 wellness-button-primary"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Medication
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -105,15 +271,25 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
     <div className="wellness-popup-overlay" onClick={onClose}>
       <div className="wellness-popup-content" onClick={(e) => e.stopPropagation()}>
         <Card className="border-0 shadow-none">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Pill className="w-5 h-5" />
-              Log Medication
-            </CardTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </CardHeader>
+                      <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="w-5 h-5" />
+                Log Medication
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowMedicationManager(true)}
+                  title="Manage Medications"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onClose}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
           <CardContent className="space-y-6">
             {/* Medication Selection */}
             <div>

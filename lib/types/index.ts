@@ -44,27 +44,65 @@ export interface EmergencyContact {
 export interface HealthCondition {
   id: string
   name: string
-  icon: string
+  type: "preset" | "custom"
   description: string
   diagnosedDate: string
   severity: "mild" | "moderate" | "severe"
   notes?: string
   isActive: boolean
+  informationBase: InformationBase
   protocols: Protocol[]
+  tools: Tool[]
   medications: string[] // medication IDs
   triggers: string[]
   symptoms: string[]
 }
 
+// New comprehensive Information Base system
+export interface InformationBase {
+  id: string
+  conditionId: string
+  selectedPresets: string[] // preset source IDs
+  customSources: InformationSource[]
+  excludedSources: string[] // excluded preset source IDs
+  customInstructions?: string
+  lastUpdated: string
+}
+
+export interface InformationSource {
+  id: string
+  title: string
+  type: "research_paper" | "clinical_guideline" | "medical_textbook" | "patient_guide" | "custom"
+  content: string
+  url?: string
+  author?: string
+  publishedDate?: string
+  reliability: "high" | "medium" | "low"
+  tags: string[]
+  isActive: boolean
+  addedBy: "system" | "user"
+}
+
+// Enhanced Protocol system
 export interface Protocol {
   id: string
   name: string
   description: string
-  steps: ProtocolStep[]
   conditionId: string
+  type: "preset" | "custom"
+  steps: ProtocolStep[]
+  sources: string[] // information source IDs
   isActive: boolean
   createdAt: string
   updatedAt: string
+  customizations?: ProtocolCustomization
+}
+
+export interface ProtocolCustomization {
+  modifiedSteps: ProtocolStep[]
+  addedSteps: ProtocolStep[]
+  removedStepIds: string[]
+  personalNotes?: string
 }
 
 export interface ProtocolStep {
@@ -75,6 +113,77 @@ export interface ProtocolStep {
   isRequired: boolean
   estimatedDuration?: number // minutes
   resources?: Resource[]
+  frequency?: "daily" | "weekly" | "monthly" | "as_needed"
+  timeOfDay?: "morning" | "afternoon" | "evening" | "bedtime" | "any"
+}
+
+// New Tool system
+export interface Tool {
+  id: string
+  name: string
+  type: "medication_reminder" | "symptom_tracker" | "mood_tracker" | "sleep_tracker" | "exercise_tracker" | "diet_tracker" | "custom"
+  description: string
+  conditionId?: string
+  isActive: boolean
+  settings: ToolSettings
+  data: ToolData[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ToolSettings {
+  frequency?: RecurringPattern
+  notifications: boolean
+  reminderTimes?: string[] // time strings like "08:00", "20:00"
+  customFields?: ToolField[]
+  thresholds?: { [key: string]: number }
+  goals?: { [key: string]: number }
+}
+
+export interface ToolField {
+  id: string
+  name: string
+  type: 'text' | 'number' | 'boolean' | 'select' | 'multiselect' | 'scale'
+  required: boolean
+  min?: number
+  max?: number
+  options?: string[]
+}
+
+export interface ToolData {
+  id: string
+  toolId: string
+  timestamp: string
+  values: { [fieldId: string]: any }
+  notes?: string
+  userId: string
+}
+
+// Enhanced User Data system
+export interface UserData {
+  id: string
+  userId: string
+  type: "electronic_health_record" | "genetic_info" | "doctor_notes" | "lab_results" | "imaging" | "custom"
+  title: string
+  description?: string
+  content?: string
+  fileUrl?: string
+  metadata: UserDataMetadata
+  tags: string[]
+  isVerified: boolean
+  privacy: "private" | "shared_with_doctor" | "research_consent"
+  uploadedAt: string
+  updatedAt: string
+}
+
+export interface UserDataMetadata {
+  provider?: string
+  date?: string
+  category?: string
+  format?: string
+  size?: number
+  checksum?: string
+  [key: string]: any // flexible metadata
 }
 
 export interface Resource {
@@ -267,12 +376,16 @@ export interface AppState {
   healthRecords: HealthRecord[]
   protocols: Protocol[]
   resources: Resource[]
+  informationSources: InformationSource[]
+  tools: Tool[]
+  userData: UserData[]
 
   // Health tracking data
   symptoms: SymptomEntry[]
   moods: MoodEntry[]
   medicationLogs: MedicationLog[]
   healthMetrics: HealthMetrics[]
+  toolData: ToolData[]
 
   // App interaction data
   aiMessages: AIMessage[]
@@ -371,4 +484,27 @@ export interface FormState {
   touched: Record<string, boolean>
   isSubmitting: boolean
   isValid: boolean
+}
+
+export interface DiseasePreset {
+  id: string
+  name: string
+  category: string
+  description: string
+  commonSymptoms: string[]
+  riskFactors: string[]
+  icon: string
+}
+
+export interface ToolPreset {
+  id: string
+  name: string
+  type: string
+  description: string
+  applicableConditions: string[]
+  defaultSettings: {
+    notifications: boolean
+    reminderTimes: string[]
+    customFields: ToolField[]
+  }
 }

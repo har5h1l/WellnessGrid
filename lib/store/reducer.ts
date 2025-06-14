@@ -1,4 +1,4 @@
-import type { AppState, AppAction } from "./types"
+import type { AppState, AppAction } from "../types"
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {

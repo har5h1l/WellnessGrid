@@ -34,7 +34,7 @@ export function MobileNav() {
     { href: "/dashboard", icon: Home, label: "Home" },
     { href: "/track", icon: Activity, label: "Track" },
     { href: "/chat", icon: MessageCircle, label: "Chat" },
-    { href: "/reports", icon: BarChart, label: "Data" },
+    { href: "/insights", icon: BarChart, label: "Insights" },
     { href: "/profile", icon: User, label: "Profile" },
   ]
 

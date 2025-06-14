@@ -24,7 +24,7 @@ export function EmptyState({
     <div className={`flex flex-col items-center justify-center text-center p-8 ${className}`}>
       <div className="w-32 h-32 mb-6">
         <Image
-          src={image || "/placeholder.svg"}
+          src={image || "/images/character.png"}
           alt="Empty state illustration"
           width={128}
           height={128}

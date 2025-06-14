@@ -1,4 +1,4 @@
-import type { AppState } from "./types"
+import type { AppState } from "../types"
 
 const STORAGE_KEY = "wellnessgrid-app-state"
 const STORAGE_VERSION = "1.0.0"

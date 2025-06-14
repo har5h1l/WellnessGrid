@@ -1,0 +1,324 @@
+-- WellnessGrid Database Schema
+-- Run this in your Supabase SQL editor
+
+-- Enable RLS (Row Level Security) for all tables
+-- Users table (extends Supabase auth.users)
+CREATE TABLE public.user_profiles (
+    id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    name TEXT NOT NULL,
+    age TEXT,
+    gender TEXT,
+    height TEXT,
+    weight TEXT,
+    wellness_score INTEGER DEFAULT 0,
+    avatar TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Health conditions table
+CREATE TABLE public.health_conditions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    condition_id TEXT NOT NULL, -- Reference to preset condition IDs
+    name TEXT NOT NULL,
+    category TEXT,
+    description TEXT,
+    severity TEXT CHECK (severity IN ('mild', 'moderate', 'severe')),
+    diagnosed_date DATE,
+    is_active BOOLEAN DEFAULT true,
+    is_custom BOOLEAN DEFAULT false,
+    icon TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User selected tools/features
+CREATE TABLE public.user_tools (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    tool_id TEXT NOT NULL,
+    tool_name TEXT NOT NULL,
+    tool_category TEXT,
+    is_enabled BOOLEAN DEFAULT true,
+    settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Information sources selected by users
+CREATE TABLE public.user_information_sources (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    condition_id TEXT NOT NULL, -- Links to health condition
+    source_id TEXT NOT NULL,
+    source_title TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_content TEXT,
+    source_url TEXT,
+    author TEXT,
+    is_custom BOOLEAN DEFAULT false,
+    is_selected BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Protocols/guidelines selected by users
+CREATE TABLE public.user_protocols (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    condition_id TEXT NOT NULL, -- Links to health condition
+    protocol_id TEXT NOT NULL,
+    protocol_name TEXT NOT NULL,
+    description TEXT,
+    protocol_type TEXT,
+    steps JSONB DEFAULT '[]',
+    is_custom BOOLEAN DEFAULT false,
+    is_selected BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Health data uploaded by users
+CREATE TABLE public.user_health_data (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    data_type TEXT CHECK (data_type IN ('ehr', 'genetic', 'lab_results', 'imaging', 'doctor_notes', 'family_history', 'other')),
+    title TEXT NOT NULL,
+    description TEXT,
+    content TEXT,
+    file_name TEXT,
+    file_size TEXT,
+    file_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Medications table
+CREATE TABLE public.medications (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    dosage TEXT,
+    frequency TEXT,
+    time_slots TEXT[] DEFAULT '{}',
+    adherence INTEGER DEFAULT 0,
+    side_effects TEXT[] DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Goals table
+CREATE TABLE public.user_goals (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    target_value NUMERIC,
+    current_value NUMERIC DEFAULT 0,
+    unit TEXT,
+    deadline DATE,
+    completed BOOLEAN DEFAULT false,
+    progress INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Symptom entries
+CREATE TABLE public.symptom_entries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    type TEXT NOT NULL,
+    severity INTEGER CHECK (severity >= 1 AND severity <= 5),
+    notes TEXT,
+    triggers TEXT[] DEFAULT '{}',
+    location TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Mood entries
+CREATE TABLE public.mood_entries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    mood TEXT CHECK (mood IN ('very-sad', 'sad', 'neutral', 'happy', 'very-happy')),
+    energy INTEGER CHECK (energy >= 1 AND energy <= 5),
+    stress INTEGER CHECK (stress >= 1 AND stress <= 5),
+    notes TEXT,
+    activities TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Medication logs
+CREATE TABLE public.medication_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    medication_id UUID REFERENCES public.medications(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    taken BOOLEAN NOT NULL,
+    notes TEXT,
+    side_effects TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tool tracking entries
+CREATE TABLE public.tracking_entries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    tool_id TEXT NOT NULL,
+    data JSONB NOT NULL DEFAULT '{}',
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Settings and preferences
+CREATE TABLE public.user_settings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    notifications_enabled BOOLEAN DEFAULT true,
+    reminder_frequency TEXT DEFAULT 'daily',
+    theme TEXT DEFAULT 'light',
+    language TEXT DEFAULT 'en',
+    privacy_settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_health_conditions_user_id ON public.health_conditions(user_id);
+CREATE INDEX idx_user_tools_user_id ON public.user_tools(user_id);
+CREATE INDEX idx_user_information_sources_user_id ON public.user_information_sources(user_id);
+CREATE INDEX idx_user_protocols_user_id ON public.user_protocols(user_id);
+CREATE INDEX idx_user_health_data_user_id ON public.user_health_data(user_id);
+CREATE INDEX idx_medications_user_id ON public.medications(user_id);
+CREATE INDEX idx_symptom_entries_user_id_date ON public.symptom_entries(user_id, date);
+CREATE INDEX idx_mood_entries_user_id_date ON public.mood_entries(user_id, date);
+CREATE INDEX idx_medication_logs_user_id_date ON public.medication_logs(user_id, date);
+CREATE INDEX idx_tracking_entries_user_id_timestamp ON public.tracking_entries(user_id, timestamp);
+CREATE INDEX idx_tracking_entries_tool_id ON public.tracking_entries(tool_id);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.health_conditions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_tools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_information_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_protocols ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_health_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.symptom_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mood_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracking_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies - Users can only access their own data
+CREATE POLICY "Users can view own profile" ON public.user_profiles
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON public.user_profiles
+    FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON public.user_profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Health conditions policies
+CREATE POLICY "Users can view own health conditions" ON public.health_conditions
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own health conditions" ON public.health_conditions
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own health conditions" ON public.health_conditions
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own health conditions" ON public.health_conditions
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- User tools policies
+CREATE POLICY "Users can manage own tools" ON public.user_tools
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Information sources policies  
+CREATE POLICY "Users can manage own information sources" ON public.user_information_sources
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Protocols policies
+CREATE POLICY "Users can manage own protocols" ON public.user_protocols
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Health data policies
+CREATE POLICY "Users can manage own health data" ON public.user_health_data
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Medications policies
+CREATE POLICY "Users can manage own medications" ON public.medications
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Tracking entries policies
+CREATE POLICY "Users can manage own tracking entries" ON public.tracking_entries
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Goals policies
+CREATE POLICY "Users can manage own goals" ON public.user_goals
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Symptom entries policies
+CREATE POLICY "Users can manage own symptom entries" ON public.symptom_entries
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Mood entries policies
+CREATE POLICY "Users can manage own mood entries" ON public.mood_entries
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Medication logs policies
+CREATE POLICY "Users can manage own medication logs" ON public.medication_logs
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Settings policies
+CREATE POLICY "Users can manage own settings" ON public.user_settings
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Function to automatically update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers for updated_at
+CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON public.user_profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_health_conditions_updated_at BEFORE UPDATE ON public.health_conditions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_tools_updated_at BEFORE UPDATE ON public.user_tools
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_information_sources_updated_at BEFORE UPDATE ON public.user_information_sources
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_protocols_updated_at BEFORE UPDATE ON public.user_protocols
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_health_data_updated_at BEFORE UPDATE ON public.user_health_data
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_medications_updated_at BEFORE UPDATE ON public.medications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_goals_updated_at BEFORE UPDATE ON public.user_goals
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON public.user_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column(); 

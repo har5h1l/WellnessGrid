@@ -95,7 +95,7 @@
 }
 
 .wellness-header {
-  @apply px-4 py-6 flex items-center justify-between bg-white/90 backdrop-blur-sm sticky top-0 z-10;
+  @apply px-4 py-4 sm:py-6 flex items-center justify-between bg-white/90 backdrop-blur-sm sticky top-0 z-10;
 }
 
 .wellness-scrollable-buttons {
@@ -117,7 +117,7 @@
 }
 
 .wellness-popup-content {
-  @apply bg-white rounded-3xl shadow-xl max-w-md w-full overflow-y-auto;
+  @apply bg-white rounded-3xl shadow-xl max-w-md w-full overflow-y-auto mx-4;
   max-height: 90vh;
 }
 
@@ -142,7 +142,7 @@
 }
 
 .wellness-feature-card {
-  @apply bg-white rounded-3xl p-4 border border-gray-100;
+  @apply bg-white rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow;
 }
 
 .wellness-symptom-item {
@@ -168,7 +168,7 @@
 }
 
 .wellness-nav-item {
-  @apply flex flex-col items-center justify-center text-xs transition-colors rounded-lg;
+  @apply flex flex-col items-center justify-center text-xs sm:text-sm transition-colors rounded-lg min-h-12;
 }
 
 .wellness-nav-item-active {

@@ -1,4 +1,4 @@
-import type { AppState } from "./types"
+import type { AppState } from "../types"
 
 export const initialState: AppState = {
   // User data

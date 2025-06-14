@@ -30,8 +30,11 @@ export function EnhancedMobileNav() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [lastScrollY])
 
-  // Hide navigation on certain pages
-  if (pathname === "/login" || pathname.startsWith("/setup") || pathname === "/") {
+  // Hide navigation on certain pages - explicitly check for app pages only
+  const appPages = ["/dashboard", "/track", "/chat", "/insights", "/profile"]
+  const shouldShowNav = appPages.some(page => pathname.startsWith(page))
+  
+  if (!shouldShowNav) {
     return null
   }
 
@@ -56,10 +59,10 @@ export function EnhancedMobileNav() {
       onClick: () => actions.navigate("/chat"),
     },
     {
-      href: "/reports",
+      href: "/insights",
       icon: BarChart,
-      label: "Data",
-      onClick: () => actions.navigate("/reports"),
+      label: "Insights",
+      onClick: () => actions.navigate("/insights"),
     },
     {
       href: "/profile",
@@ -141,16 +144,16 @@ export function EnhancedMobileNav() {
                 key={item.href}
                 onClick={() => handleNavigation(item)}
                 className={cn(
-                  "wellness-nav-item w-full h-full relative",
-                  isActive ? "wellness-nav-item-active" : "wellness-nav-item-inactive",
-                  isChat ? "-mt-4" : "",
+                  "flex flex-col items-center justify-center w-full h-full relative px-2 py-2",
+                  isActive ? "text-red-500" : "text-gray-500",
+                  isChat ? "pb-0" : "",
                 )}
               >
                 {isChat && (
-                  <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-red-500 rounded-full p-3 shadow-lg">
+                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-red-500 rounded-full p-3 shadow-lg border-4 border-white">
                     <item.icon className="w-5 h-5 text-white" />
                     {item.badge && item.badge > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full text-xs text-white flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
                         {item.badge}
                       </span>
                     )}
@@ -158,15 +161,15 @@ export function EnhancedMobileNav() {
                 )}
                 {!isChat && (
                   <>
-                    <item.icon className={cn("w-5 h-5 mb-1", isActive ? "text-red-500" : "text-gray-500")} />
+                    <item.icon className="w-5 h-5 mb-1" />
                     {item.badge && item.badge > 0 && (
-                      <span className="absolute top-1 right-1/2 translate-x-2 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                      <span className="absolute top-1 right-1/2 translate-x-2 w-5 h-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
                         {item.badge}
                       </span>
                     )}
                   </>
                 )}
-                <span className={cn("font-medium", isChat ? "mt-3" : "")}>{item.label}</span>
+                <span className={cn("text-xs font-medium", isChat ? "mt-4" : "mt-1")}>{item.label}</span>
               </button>
             )
           })}

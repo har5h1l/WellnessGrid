@@ -20,7 +20,7 @@ export function AppLogo({ variant = "full", size = "md", className = "" }: AppLo
   return (
     <Link href="/dashboard" className={className}>
       <Image
-        src={src || "/placeholder.svg"}
+        src={src || "/images/logo-icon.png"}
         alt={alt}
         width={sizes[size].width}
         height={sizes[size].height}

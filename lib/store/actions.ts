@@ -1,5 +1,5 @@
 import type React from "react"
-import type { AppState, AppAction } from "./types"
+import type { AppState, AppAction } from "../types"
 
 // Action creators with proper error handling and validation
 export const createActions = (dispatch: React.Dispatch<AppAction>) => ({

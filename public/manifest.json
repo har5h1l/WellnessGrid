@@ -1,0 +1,21 @@
+{
+  "name": "WellnessGrid - AI Health Companion for Teens",
+  "short_name": "WellnessGrid",
+  "description": "AI-powered chronic condition coach for teens",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ef4444",
+  "icons": [
+    {
+      "src": "/images/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 
