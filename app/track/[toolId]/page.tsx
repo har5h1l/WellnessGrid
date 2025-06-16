@@ -49,6 +49,7 @@ export default function ToolTrackingPage() {
   const [userTool, setUserTool] = useState<any>(null)
   const [todayEntries, setTodayEntries] = useState<any[]>([])
   const [effectivePreset, setEffectivePreset] = useState<any>(null)
+  const [exerciseFieldsInitialized, setExerciseFieldsInitialized] = useState(false)
   
   const toolPreset = toolPresets.find(tool => tool.id === toolId)
 
@@ -67,12 +68,24 @@ export default function ToolTrackingPage() {
 
         const userData = await DatabaseService.getUserCompleteData(user.id)
         
+        // Debug: Log all available tools
+        console.log('=== ALL AVAILABLE TOOLS DEBUG ===')
+        console.log('Search toolId:', toolId)
+        console.log('All user tools:', userData.tools.map(t => ({
+          id: t.tool_id,
+          name: t.tool_name,
+          category: t.tool_category,
+          enabled: t.is_enabled
+        })))
+        
         // More flexible tool lookup - match by ID, name, or category
         let tool = userData.tools.find(t => t.tool_id === toolId && t.is_enabled)
         
         // If not found by exact ID, try matching by name or category
         if (!tool) {
+          console.log('Exact match failed, trying flexible matching...')
           const normalizedToolId = toolId.toLowerCase().replace(/[-_]/g, '')
+          console.log('Normalized search term:', normalizedToolId)
           
           // First try to find any enabled tool matching the pattern
           tool = userData.tools.find(t => {
@@ -90,24 +103,59 @@ export default function ToolTrackingPage() {
               // Specific mappings for common tool types
               (normalizedToolId.includes('glucose') && (toolName.includes('glucose') || toolName.includes('diabetes') || toolCategory.includes('glucose'))),
               (normalizedToolId.includes('mood') && (toolName.includes('mood') || toolName.includes('depression') || toolName.includes('mental') || toolCategory.includes('mood'))),
-                             (normalizedToolId.includes('exercise') && (toolName.includes('exercise') || toolName.includes('fitness') || toolName.includes('workout') || toolCategory.includes('exercise'))),
-               (normalizedToolId.includes('physical') && (toolName.includes('physical') || toolName.includes('activity') || toolName.includes('exercise') || toolCategory.includes('physical'))),
-               (normalizedToolId.includes('activity') && (toolName.includes('activity') || toolName.includes('physical') || toolName.includes('exercise') || toolCategory.includes('activity'))),
-              (normalizedToolId.includes('medication') && (toolName.includes('medication') || toolName.includes('medicine') || toolName.includes('pill') || toolName.includes('adherence') || toolCategory.includes('medication')))
+              (normalizedToolId.includes('exercise') && (toolName.includes('exercise') || toolName.includes('fitness') || toolName.includes('workout') || toolCategory.includes('exercise'))),
+              (normalizedToolId.includes('physical') && (toolName.includes('physical') || toolName.includes('activity') || toolName.includes('exercise') || toolName.includes('fitness'))),
+              (normalizedToolId.includes('activity') && (toolName.includes('activity') || toolName.includes('physical') || toolName.includes('exercise') || toolName.includes('fitness'))),
+              (normalizedToolId.includes('medication') && (toolName.includes('medication') || toolName.includes('medicine') || toolName.includes('pill') || toolName.includes('adherence') || toolCategory.includes('medication'))),
+              // Handle compound words
+              (normalizedToolId.includes('physicalactivity') && (toolName.includes('physical') || toolName.includes('activity') || toolName.includes('exercise'))),
+              (normalizedToolId.includes('activitytracker') && (toolName.includes('activity') || toolName.includes('tracker') || toolName.includes('exercise')))
             ]
             
-            return matches.some(match => match)
+            const matchResult = matches.some(match => match)
+            if (matchResult) {
+              console.log('Tool matched via comprehensive matching:', { 
+                toolId: t.tool_id, 
+                toolName: t.tool_name, 
+                matches: matches.map((m, i) => ({ [`match_${i}`]: m }))
+              })
+            }
+            return matchResult
           })
         }
         
         // If still not found, try a more lenient search (case insensitive contains)
         if (!tool) {
+          console.log('Comprehensive matching failed, trying lenient search...')
           tool = userData.tools.find(t => {
             if (!t.is_enabled) return false
             const toolName = t.tool_name?.toLowerCase() || ''
             const toolCategory = t.tool_category?.toLowerCase() || ''
             const searchTerm = toolId.toLowerCase()
             return toolName.includes(searchTerm) || toolCategory.includes(searchTerm) || searchTerm.includes(toolName) || searchTerm.includes(toolCategory)
+          })
+        }
+        
+        // If still not found, try removing common suffixes and prefixes
+        if (!tool) {
+          const simplifiedSearch = toolId.toLowerCase()
+            .replace(/[-_]/g, '')
+            .replace('tracker', '')
+            .replace('monitor', '')
+            .replace('logger', '')
+            .trim()
+          
+          tool = userData.tools.find(t => {
+            if (!t.is_enabled) return false
+            const toolName = t.tool_name?.toLowerCase().replace(/[-_\s]/g, '') || ''
+            const toolCategory = t.tool_category?.toLowerCase().replace(/[-_\s]/g, '') || ''
+            
+            return (
+              toolName.includes(simplifiedSearch) || 
+              toolCategory.includes(simplifiedSearch) ||
+              simplifiedSearch.includes(toolName) ||
+              simplifiedSearch.includes(toolCategory)
+            )
           })
         }
         
@@ -177,6 +225,47 @@ export default function ToolTrackingPage() {
     }
     loadData()
   }, [toolId])
+
+  // Initialize exercise fields when needed
+  useEffect(() => {
+    if (effectivePreset && userTool && !exerciseFieldsInitialized) {
+      const toolType = effectivePreset?.type || userTool?.tool_category || 'custom'
+      const isExerciseTool = toolType === 'exercise_tracker' || 
+                            toolId === "exercise-tracker" || 
+                            toolId === "exercise" ||
+                            toolId === "fitness-tracker" ||
+                            toolId === "workout-tracker" ||
+                            toolId === "physical-activity-tracker" ||
+                            toolId === "activity-tracker" ||
+                            userTool?.tool_name?.toLowerCase().includes('exercise') ||
+                            userTool?.tool_name?.toLowerCase().includes('fitness') ||
+                            userTool?.tool_name?.toLowerCase().includes('workout') ||
+                            userTool?.tool_name?.toLowerCase().includes('physical') ||
+                            userTool?.tool_name?.toLowerCase().includes('activity')
+
+      if (isExerciseTool && !fieldValues.exercise_type) {
+        const exerciseFields = [
+          { id: "exercise_type", name: "Exercise Type", type: "select", required: true },
+          { id: "duration", name: "Duration (minutes)", type: "number", required: true, min: 1, max: 300 },
+          { id: "intensity", name: "Intensity Level", type: "emoji_select", required: true },
+          { id: "calories", name: "Calories Burned", type: "number", required: false, min: 0 },
+          { id: "rating", name: "How did you feel? (1-10)", type: "scale", required: false, min: 1, max: 10 }
+        ]
+        
+        const initialValues: FieldValue = {}
+        exerciseFields.forEach(field => {
+          if (field.type === 'scale') {
+            initialValues[field.id] = field.min || 1
+          } else {
+            initialValues[field.id] = ''
+          }
+        })
+        
+        setFieldValues(prev => ({ ...prev, ...initialValues }))
+        setExerciseFieldsInitialized(true)
+      }
+    }
+  }, [effectivePreset, userTool, toolId, fieldValues.exercise_type, exerciseFieldsInitialized])
 
   // Validate form
   const validateForm = (): boolean => {
@@ -842,23 +931,53 @@ export default function ToolTrackingPage() {
                                      userTool?.tool_name?.toLowerCase().includes('nutrition') ||
                                      userTool?.tool_name?.toLowerCase().includes('food')
               
-              const isMoodTool = toolType === 'mood_tracker' || 
+              // Define exercise tool first to avoid reference errors
+              const isExerciseTool = toolType === 'exercise_tracker' || 
+                                    toolId === "exercise-tracker" || 
+                                    toolId === "exercise" ||
+                                    toolId === "fitness-tracker" ||
+                                    toolId === "workout-tracker" ||
+                                    toolId === "physical-activity-tracker" ||
+                                    toolId === "activity-tracker" ||
+                                    userTool?.tool_name?.toLowerCase().includes('exercise') ||
+                                    userTool?.tool_name?.toLowerCase().includes('fitness') ||
+                                    userTool?.tool_name?.toLowerCase().includes('workout') ||
+                                    userTool?.tool_name?.toLowerCase().includes('physical') ||
+                                    userTool?.tool_name?.toLowerCase().includes('activity')
+              
+              // Debug exercise tool detection
+              if (toolId === "physical-activity-tracker" || toolId.includes('activity') || toolId.includes('exercise')) {
+                console.log('=== EXERCISE TOOL DETECTION DEBUG ===', {
+                  toolId,
+                  toolType,
+                  userToolName: userTool?.tool_name,
+                  userToolCategory: userTool?.tool_category,
+                  'toolType === exercise_tracker': toolType === 'exercise_tracker',
+                  'toolId === physical-activity-tracker': toolId === "physical-activity-tracker",
+                  'includes exercise': userTool?.tool_name?.toLowerCase().includes('exercise'),
+                  'includes activity': userTool?.tool_name?.toLowerCase().includes('activity'),
+                  'includes physical': userTool?.tool_name?.toLowerCase().includes('physical'),
+                  'final isExerciseTool': isExerciseTool
+                })
+              }
+              
+              const isMoodTool = !isExerciseTool && (toolType === 'mood_tracker' || 
                                 toolId === "mood-tracker" || 
                                 toolId === "mood" ||
                                 toolId === "depression-tracker" ||
                                 userTool?.tool_name?.toLowerCase().includes('mood') ||
                                 userTool?.tool_name?.toLowerCase().includes('mental') ||
-                                userTool?.tool_name?.toLowerCase().includes('depression')
+                                userTool?.tool_name?.toLowerCase().includes('depression'))
               
-              const isSymptomTool = toolType === 'symptom_tracker' || 
+              const isSymptomTool = !isExerciseTool && (toolType === 'symptom_tracker' || 
                                    toolId === "symptom-tracker" || 
                                    toolId === "pain-tracker" ||
                                    toolId === "symptoms" ||
                                    toolId === "pain" ||
                                    userTool?.tool_name?.toLowerCase().includes('symptom') ||
-                                   userTool?.tool_name?.toLowerCase().includes('pain')
+                                   userTool?.tool_name?.toLowerCase().includes('pain'))
               
-              const isMedicationTool = toolType === 'medication_reminder' || 
+              const isMedicationTool = !isExerciseTool && (toolType === 'medication_reminder' || 
                                       toolId === "medication-reminder" || 
                                       toolId === "medication" ||
                                       toolId === "pill-tracker" ||
@@ -866,19 +985,7 @@ export default function ToolTrackingPage() {
                                       userTool?.tool_name?.toLowerCase().includes('medication') ||
                                       userTool?.tool_name?.toLowerCase().includes('medicine') ||
                                       userTool?.tool_name?.toLowerCase().includes('pill') ||
-                                      userTool?.tool_name?.toLowerCase().includes('adherence')
-              
-              const isExerciseTool = toolType === 'exercise_tracker' || 
-                                    toolId === "exercise-tracker" || 
-                                    toolId === "exercise" ||
-                                    toolId === "fitness-tracker" ||
-                                    toolId === "workout-tracker" ||
-                                    toolId === "physical-activity-tracker" ||
-                                    userTool?.tool_name?.toLowerCase().includes('exercise') ||
-                                    userTool?.tool_name?.toLowerCase().includes('fitness') ||
-                                    userTool?.tool_name?.toLowerCase().includes('workout') ||
-                                    userTool?.tool_name?.toLowerCase().includes('physical') ||
-                                    userTool?.tool_name?.toLowerCase().includes('activity')
+                                      userTool?.tool_name?.toLowerCase().includes('adherence'))
               
               // Handle "general" tool ID by checking user tool name or defaulting to mood tracker
               const isGeneralTool = toolId === "general"
@@ -888,9 +995,42 @@ export default function ToolTrackingPage() {
                 toolId,
                 toolType,
                 userToolName: userTool?.tool_name,
+                userToolCategory: userTool?.tool_category,
                 isHydrationTool, isSleepTool, isGlucoseTool, isVitalSignsTool, 
-                isNutritionTool, isMoodTool, isSymptomTool, isMedicationTool, isExerciseTool, isGeneralTool
+                isNutritionTool, isMoodTool, isSymptomTool, isMedicationTool, isExerciseTool, isGeneralTool,
+                'Which component will render?': isHydrationTool ? 'Hydration' : 
+                                               isSleepTool ? 'Sleep' :
+                                               isGlucoseTool ? 'Glucose' :
+                                               isVitalSignsTool ? 'VitalSigns' :
+                                               isNutritionTool ? 'Nutrition' :
+                                               isSymptomTool ? 'Symptom' :
+                                               isMedicationTool ? 'Medication' :
+                                               isExerciseTool ? 'Exercise' :
+                                               (isMoodTool || isGeneralTool) ? 'Mood' : 'Default'
               })
+              
+              // Additional debug for exercise tool detection
+              if (toolId.includes('exercise') || toolId.includes('activity') || toolId.includes('physical')) {
+                console.log('=== EXERCISE TOOL DEBUG ===', {
+                  'toolType === exercise_tracker': toolType === 'exercise_tracker',
+                  'toolId matches': [
+                    'exercise-tracker: ' + (toolId === "exercise-tracker"),
+                    'exercise: ' + (toolId === "exercise"), 
+                    'fitness-tracker: ' + (toolId === "fitness-tracker"),
+                    'workout-tracker: ' + (toolId === "workout-tracker"),
+                    'physical-activity-tracker: ' + (toolId === "physical-activity-tracker"),
+                    'activity-tracker: ' + (toolId === "activity-tracker")
+                  ],
+                  'tool name includes': [
+                    'exercise: ' + (userTool?.tool_name?.toLowerCase().includes('exercise')),
+                    'fitness: ' + (userTool?.tool_name?.toLowerCase().includes('fitness')),
+                    'workout: ' + (userTool?.tool_name?.toLowerCase().includes('workout')),
+                    'physical: ' + (userTool?.tool_name?.toLowerCase().includes('physical')),
+                    'activity: ' + (userTool?.tool_name?.toLowerCase().includes('activity'))
+                  ],
+                  'final isExerciseTool': isExerciseTool
+                })
+              }
               
               if (isHydrationTool) {
 
@@ -971,6 +1111,7 @@ export default function ToolTrackingPage() {
                   </div>
                 )
               } else if (isExerciseTool) {
+                console.log('=== RENDERING EXERCISE TOOL ===', { toolId, userToolName: userTool?.tool_name })
                 // Exercise tracker with custom fields
                 const exerciseFields = [
                   { id: "exercise_type", name: "Exercise Type", type: "select", required: true, 
@@ -987,28 +1128,6 @@ export default function ToolTrackingPage() {
                   { id: "calories", name: "Calories Burned", type: "number", required: false, min: 0 },
                   { id: "rating", name: "How did you feel? (1-10)", type: "scale", required: false, min: 1, max: 10 }
                 ]
-                
-                // Update the effective preset to use exercise fields
-                const exercisePreset = {
-                  ...effectivePreset,
-                  defaultSettings: {
-                    ...effectivePreset.defaultSettings,
-                    customFields: exerciseFields
-                  }
-                }
-                
-                // Update field values if not already set for exercise
-                if (!fieldValues.exercise_type) {
-                  const initialValues: FieldValue = {}
-                  exerciseFields.forEach(field => {
-                    if (field.type === 'scale') {
-                      initialValues[field.id] = field.min || 1
-                    } else {
-                      initialValues[field.id] = ''
-                    }
-                  })
-                  setFieldValues(prev => ({ ...prev, ...initialValues }))
-                }
                 
                 return (
                   <>
@@ -1053,6 +1172,13 @@ export default function ToolTrackingPage() {
                   </>
                 )
               } else if (isMoodTool || isGeneralTool) {
+                console.log('=== RENDERING MOOD TOOL ===', { 
+                  toolId, 
+                  userToolName: userTool?.tool_name,
+                  isMoodTool,
+                  isGeneralTool,
+                  'Why mood?': isMoodTool ? 'isMoodTool is true' : 'isGeneralTool is true'
+                })
                 return (
                   <MoodTracker 
                     toolId={toolId} 

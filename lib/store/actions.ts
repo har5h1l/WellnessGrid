@@ -108,6 +108,34 @@ export const createActions = (dispatch: React.Dispatch<AppAction>) => ({
     }
   },
 
+  // AI Message actions
+  addAIMessage: (message: Omit<AppState["aiMessages"][0], "id" | "userId">) => {
+    try {
+      // Validate message data
+      if (!message.content || !message.type || !message.timestamp) {
+        throw new Error("Invalid AI message data")
+      }
+
+      const newMessage = {
+        ...message,
+        id: `ai-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        userId: "current-user", // This would come from auth context
+      }
+
+      dispatch({ type: "ADD_AI_MESSAGE", payload: newMessage })
+      dispatch({ type: "CLEAR_ERROR", payload: "ai-messages" })
+    } catch (error) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: {
+          key: "ai-messages",
+          message: "Failed to add AI message",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      })
+    }
+  },
+
   // Error handling actions
   clearError: (key: string) => {
     dispatch({ type: "CLEAR_ERROR", payload: key })

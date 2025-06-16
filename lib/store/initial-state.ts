@@ -40,6 +40,7 @@ export const initialState: AppState = {
   lastSync: new Date().toISOString(),
   setupCompleted: false,
   currentView: "dashboard",
+  navigationHistory: [],
 
   // Error handling
   errors: {},

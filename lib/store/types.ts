@@ -207,6 +207,7 @@ export interface AppState {
   lastSync: string
   setupCompleted: boolean
   currentView: string
+  navigationHistory: string[]
 
   // Error handling
   errors: {
@@ -265,6 +266,8 @@ export type AppAction =
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ONLINE_STATUS"; payload: boolean }
   | { type: "SET_CURRENT_VIEW"; payload: string }
+  | { type: "ADD_TO_NAVIGATION_HISTORY"; payload: string }
+  | { type: "SET_LAST_SYNC"; payload: string }
   | { type: "COMPLETE_SETUP" }
   | { type: "UPDATE_PREFERENCES"; payload: Partial<AppPreferences> }
   | { type: "UPDATE_WELLNESS_SCORE"; payload: number }
@@ -274,6 +277,6 @@ export type AppAction =
   | { type: "RESET_APP_STATE" }
 
   // Error handling
-  | { type: "SET_ERROR"; payload: { key: string; message: string } }
+  | { type: "SET_ERROR"; payload: { key: string; message: string; details?: string } }
   | { type: "CLEAR_ERROR"; payload: string }
   | { type: "CLEAR_ALL_ERRORS" }

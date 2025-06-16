@@ -1,0 +1,10 @@
+{
+  "name": "hf-api-test",
+  "version": "1.0.0",
+  "description": "Test Hugging Face API endpoints",
+  "main": "test-hf-api.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "dotenv": "^16.0.3"
+  }
+} 

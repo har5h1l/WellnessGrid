@@ -9,9 +9,21 @@ import { MoodTracker } from "@/components/mood-tracker"
 import { SymptomTracker } from "@/components/symptom-tracker"
 import { MedicationLogger } from "@/components/medication-logger"
 import { AppLogo } from "@/components/app-logo"
-import { ArrowLeft, Send, Activity, Heart, Pill, TrendingUp, Calendar, AlertCircle } from "lucide-react"
+import { ArrowLeft, Send, Activity, Heart, Pill, TrendingUp, Calendar, AlertCircle, BookOpen, Sparkles } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+
+interface AIMessage {
+  type: "user" | "ai";
+  content: string;
+  timestamp: string;
+  suggestions?: string[];
+  sources?: Array<{
+    title: string;
+    similarity: string;
+  }>;
+  mockMode?: boolean;
+}
 
 export default function ChatAssistant() {
   const { state, actions, isReady } = useApp()
@@ -92,7 +104,52 @@ export default function ChatAssistant() {
     handleSendMessage(message)
   }
 
-  const generateAIResponse = (userMessage: string): string => {
+  const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean}> => {
+    try {
+      // Create context-aware query with user's health information
+      let contextualQuery = userMessage;
+      
+      // Add user context to improve responses
+      if (conditions.length > 0) {
+        const conditionNames = conditions.map(c => c.name).join(', ');
+        contextualQuery = `I have ${conditionNames}. ${userMessage}`;
+      }
+
+      // Call our LLM API
+      const response = await fetch('/api/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: contextualQuery }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Return the full AI response data
+      return {
+        answer: data.answer || "I apologize, but I'm having trouble generating a response right now. Please try again.",
+        sources: data.sources,
+        mockMode: data.metadata?.mockMode
+      };
+      
+    } catch (error) {
+      console.error('Error calling LLM API:', error);
+      
+      // Fallback to condition-specific responses if API fails
+      return {
+        answer: generateFallbackResponse(userMessage),
+        sources: undefined,
+        mockMode: false
+      };
+    }
+  }
+
+  const generateFallbackResponse = (userMessage: string): string => {
     const message = userMessage.toLowerCase()
     const conditionSpecificResponses: Record<string, string[]> = {
       asthma: [
@@ -110,6 +167,11 @@ export default function ChatAssistant() {
         "Gentle movement can help with arthritis stiffness. Have you done any stretches today?",
         "Temperature changes can affect arthritis symptoms. Have you noticed any weather-related patterns?",
       ],
+    }
+
+    // Emergency responses (priority)
+    if (message.includes("emergency") || message.includes("urgent") || message.includes("help")) {
+      return "If this is a medical emergency, please call 911 or go to the nearest emergency room immediately. For urgent but non-emergency concerns, contact your healthcare provider. I'm here to support you with general guidance and tracking."
     }
 
     // Symptom-related responses
@@ -130,11 +192,6 @@ export default function ChatAssistant() {
     // Medication-related responses
     if (message.includes("medication") || message.includes("medicine") || message.includes("pill")) {
       return "Medication adherence is crucial for managing your condition effectively. I can help you track your medications, set reminders, or answer questions about your treatment plan. What would be most helpful?"
-    }
-
-    // Emergency responses
-    if (message.includes("emergency") || message.includes("urgent") || message.includes("help")) {
-      return "If this is a medical emergency, please call 911 or go to the nearest emergency room immediately. For urgent but non-emergency concerns, contact your healthcare provider. I'm here to support you with general guidance and tracking."
     }
 
     // Condition-specific responses
@@ -173,22 +230,34 @@ export default function ChatAssistant() {
     setNewMessage("")
     setIsTyping(true)
 
-    // Simulate AI processing time
-    setTimeout(
-      () => {
-        const aiResponse = generateAIResponse(messageToSend)
+    try {
+      // Generate AI response using our LLM API
+      const aiResponseData = await generateAIResponse(messageToSend)
         const aiMessage = {
           type: "ai" as const,
-          content: aiResponse,
+        content: aiResponseData.answer,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           suggestions: ["Log symptoms", "Track mood", "View progress", "Set reminder"],
+        sources: aiResponseData.sources,
+        mockMode: aiResponseData.mockMode,
         }
 
         actions.addAIMessage(aiMessage)
+    } catch (error) {
+      console.error('Error generating AI response:', error)
+      
+      // Show error message to user
+      const errorMessage = {
+        type: "ai" as const,
+        content: "I'm sorry, I'm having trouble responding right now. Please try again in a moment. If this is urgent, please contact your healthcare provider.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        suggestions: ["Try again", "Contact support", "Emergency help"],
+      }
+      
+      actions.addAIMessage(errorMessage)
+    } finally {
         setIsTyping(false)
-      },
-      1000 + Math.random() * 1000,
-    )
+    }
   }
 
   if (!user) {
@@ -257,6 +326,28 @@ export default function ChatAssistant() {
                   <div className="text-xs text-gray-500">{message.type === "ai" ? "AI Coach" : user.name}</div>
                   <div className={message.type === "ai" ? "wellness-message-ai" : "wellness-message-user"}>
                     <p className="text-sm leading-relaxed">{message.content}</p>
+                    {message.type === "ai" && message.mockMode && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Demo mode - using sample health data</span>
+                      </div>
+                    )}
+                    {message.type === "ai" && message.sources && message.sources.length > 0 && (
+                      <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-1 mb-1">
+                          <BookOpen className="w-3 h-3 text-gray-500" />
+                          <span className="text-xs font-medium text-gray-700">Information sources:</span>
+                        </div>
+                        <div className="space-y-1">
+                          {message.sources.map((source, index) => (
+                            <div key={index} className="text-xs text-gray-600 flex justify-between items-center">
+                              <span>{source.title}</span>
+                              <span className="text-gray-400">({Math.round(parseFloat(source.similarity) * 100)}% match)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {message.suggestions && message.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">

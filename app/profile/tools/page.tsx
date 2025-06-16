@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AppLogo } from "@/components/app-logo"
-import { ArrowLeft, Settings, Plus, Search, Filter, Wrench, Activity, Heart, Brain, Target, Clock, Bell } from "lucide-react"
+import { ArrowLeft, Settings, Plus, Search, Filter, Wrench, Activity, Heart, Brain, Target, Clock, Bell, Pill, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { DatabaseService, authHelpers } from "@/lib/database"
 import type { UserTool, HealthCondition } from "@/lib/database"
@@ -29,6 +29,15 @@ export default function ToolsManagementPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [showAddTool, setShowAddTool] = useState(false)
   const [editingTool, setEditingTool] = useState<string | null>(null)
+  const [showAddMedication, setShowAddMedication] = useState<string | null>(null)
+  const [newMedication, setNewMedication] = useState({
+    name: '',
+    dosage: '',
+    frequency: '',
+    instructions: '',
+    startDate: '',
+    endDate: ''
+  })
 
   // Load user data
   useEffect(() => {
@@ -183,11 +192,85 @@ export default function ToolsManagementPage() {
     }
   }
 
-  // Render tool settings form
-  const renderToolSettings = (tool: UserTool, toolPreset: typeof toolPresets[0]) => {
-    if (!toolPreset) return null
+  // Add medication to tool
+  const addMedication = async (toolId: string) => {
+    if (!currentUser || !newMedication.name.trim()) return
 
+    try {
+      const tool = userTools.find(t => t.id === toolId)
+      if (!tool) return
+
+      const medications = tool.settings?.medications || []
+      const medication = {
+        id: Date.now().toString(),
+        ...newMedication,
+        adherence: 100,
+        createdAt: new Date().toISOString()
+      }
+
+      const updatedSettings = {
+        ...tool.settings,
+        medications: [...medications, medication]
+      }
+
+      await updateToolSettings(toolId, updatedSettings)
+      
+      setNewMedication({
+        name: '',
+        dosage: '',
+        frequency: '',
+        instructions: '',
+        startDate: '',
+        endDate: ''
+      })
+      setShowAddMedication(null)
+      
+      toast.success('Medication added successfully')
+    } catch (error) {
+      console.error('Error adding medication:', error)
+      toast.error('Failed to add medication')
+    }
+  }
+
+  // Remove medication from tool
+  const removeMedication = async (toolId: string, medicationId: string) => {
+    if (!currentUser) return
+
+    try {
+      const tool = userTools.find(t => t.id === toolId)
+      if (!tool) return
+
+      const medications = (tool.settings?.medications || []).filter(m => m.id !== medicationId)
+      const updatedSettings = {
+        ...tool.settings,
+        medications
+      }
+
+      await updateToolSettings(toolId, updatedSettings)
+      toast.success('Medication removed')
+    } catch (error) {
+      console.error('Error removing medication:', error)
+      toast.error('Failed to remove medication')
+    }
+  }
+
+  // Render tool settings form
+  const renderToolSettings = (tool: UserTool, toolPreset: typeof toolPresets[0] | null) => {
     const currentSettings = tool.settings || {}
+    
+    // Create a fallback preset if none found
+    const effectivePreset = toolPreset || {
+      id: tool.tool_id,
+      name: tool.tool_name,
+      type: tool.tool_category || 'custom',
+      description: '',
+      applicableConditions: ['all'],
+      defaultSettings: {
+        notifications: true,
+        reminderTimes: ['08:00', '20:00'],
+        customFields: []
+      }
+    }
 
     return (
       <div className="space-y-4 mt-4 p-4 bg-gray-50 rounded-lg">
@@ -221,13 +304,13 @@ export default function ToolsManagementPage() {
           <div className="space-y-3">
             <Label className="text-sm font-medium">Reminder Times</Label>
             <div className="grid grid-cols-2 gap-2">
-              {(currentSettings.reminderTimes || toolPreset.defaultSettings.reminderTimes || []).map((time, index) => (
+              {(currentSettings.reminderTimes || effectivePreset.defaultSettings.reminderTimes || []).map((time, index) => (
                 <div key={index} className="flex items-center space-x-2">
                   <Input
                     type="time"
                     value={time}
                     onChange={(e) => {
-                      const newTimes = [...(currentSettings.reminderTimes || toolPreset.defaultSettings.reminderTimes || [])]
+                      const newTimes = [...(currentSettings.reminderTimes || effectivePreset.defaultSettings.reminderTimes || [])]
                       newTimes[index] = e.target.value
                       updateToolSettings(tool.id!, { ...currentSettings, reminderTimes: newTimes })
                     }}
@@ -237,7 +320,7 @@ export default function ToolsManagementPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const newTimes = (currentSettings.reminderTimes || toolPreset.defaultSettings.reminderTimes || []).filter((_, i) => i !== index)
+                      const newTimes = (currentSettings.reminderTimes || effectivePreset.defaultSettings.reminderTimes || []).filter((_, i) => i !== index)
                       updateToolSettings(tool.id!, { ...currentSettings, reminderTimes: newTimes })
                     }}
                   >
@@ -249,7 +332,7 @@ export default function ToolsManagementPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newTimes = [...(currentSettings.reminderTimes || toolPreset.defaultSettings.reminderTimes || []), "12:00"]
+                  const newTimes = [...(currentSettings.reminderTimes || effectivePreset.defaultSettings.reminderTimes || []), "12:00"]
                   updateToolSettings(tool.id!, { ...currentSettings, reminderTimes: newTimes })
                 }}
               >
@@ -260,11 +343,11 @@ export default function ToolsManagementPage() {
         )}
 
         {/* Custom Fields Settings */}
-        {toolPreset.defaultSettings.customFields && (
+        {effectivePreset.defaultSettings.customFields && effectivePreset.defaultSettings.customFields.length > 0 && (
           <div className="space-y-3">
             <Label className="text-sm font-medium">Field Configuration</Label>
             <div className="space-y-2">
-              {toolPreset.defaultSettings.customFields.map((field, index) => (
+              {effectivePreset.defaultSettings.customFields.map((field, index) => (
                 <div key={field.id} className="flex items-center justify-between p-2 border rounded">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -285,6 +368,145 @@ export default function ToolsManagementPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Medication Management for medication tools */}
+        {(tool.tool_category === 'medication_reminder' || effectivePreset.type === 'medication_reminder' || 
+          tool.tool_name?.toLowerCase().includes('medication') || tool.tool_name?.toLowerCase().includes('medicine') ||
+          tool.tool_name?.toLowerCase().includes('adherence')) && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Medications</Label>
+              <Button
+                size="sm"
+                onClick={() => setShowAddMedication(showAddMedication === tool.id ? null : tool.id!)}
+                className="text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Medication
+              </Button>
+            </div>
+            
+            {/* Existing Medications */}
+            <div className="space-y-2">
+              {(currentSettings.medications || []).map((medication: any) => (
+                <div key={medication.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                  <div className="flex items-center space-x-3">
+                    <Pill className="w-4 h-4 text-blue-500" />
+                    <div>
+                      <h4 className="font-medium text-sm">{medication.name}</h4>
+                      <p className="text-xs text-gray-600">
+                        {medication.dosage} - {medication.frequency}
+                      </p>
+                      {medication.instructions && (
+                        <p className="text-xs text-gray-500">{medication.instructions}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeMedication(tool.id!, medication.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+              
+              {(currentSettings.medications || []).length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No medications added yet
+                </div>
+              )}
+            </div>
+
+            {/* Add Medication Form */}
+            {showAddMedication === tool.id && (
+              <div className="space-y-3 p-3 border rounded-lg bg-gray-50">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Medication Name</Label>
+                    <Input
+                      placeholder="e.g. Lisinopril"
+                      value={newMedication.name}
+                      onChange={(e) => setNewMedication(prev => ({ ...prev, name: e.target.value }))}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Dosage</Label>
+                    <Input
+                      placeholder="e.g. 10mg"
+                      value={newMedication.dosage}
+                      onChange={(e) => setNewMedication(prev => ({ ...prev, dosage: e.target.value }))}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Frequency</Label>
+                    <Select
+                      value={newMedication.frequency}
+                      onValueChange={(value) => setNewMedication(prev => ({ ...prev, frequency: value }))}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Select frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Once daily">Once daily</SelectItem>
+                        <SelectItem value="Twice daily">Twice daily</SelectItem>
+                        <SelectItem value="Three times daily">Three times daily</SelectItem>
+                        <SelectItem value="Four times daily">Four times daily</SelectItem>
+                        <SelectItem value="As needed">As needed</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={newMedication.startDate}
+                      onChange={(e) => setNewMedication(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-xs">Instructions (Optional)</Label>
+                  <Input
+                    placeholder="e.g. Take with food"
+                    value={newMedication.instructions}
+                    onChange={(e) => setNewMedication(prev => ({ ...prev, instructions: e.target.value }))}
+                    className="text-sm"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => addMedication(tool.id!)}
+                    disabled={!newMedication.name.trim()}
+                    className="flex-1"
+                  >
+                    Add Medication
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddMedication(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -450,7 +672,16 @@ export default function ToolsManagementPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingTool(isEditing ? null : tool.userTool?.id || null)}
+                            onClick={() => {
+                              console.log('Settings clicked for tool:', {
+                                toolId: tool.userTool?.id,
+                                toolName: tool.userTool?.tool_name,
+                                toolCategory: tool.userTool?.tool_category,
+                                currentlyEditing: editingTool,
+                                toolPresetFound: !!toolPreset
+                              })
+                              setEditingTool(isEditing ? null : tool.userTool?.id || null)
+                            }}
                           >
                             <Settings className="w-4 h-4" />
                           </Button>
@@ -470,7 +701,7 @@ export default function ToolsManagementPage() {
                       </div>
                       
                       {/* Tool Settings */}
-                      {isEditing && tool.userTool && toolPreset && renderToolSettings(tool.userTool, toolPreset)}
+                      {isEditing && tool.userTool && renderToolSettings(tool.userTool, toolPreset)}
                       
                       {/* Quick Use Button */}
                       {!isEditing && (

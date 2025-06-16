@@ -298,6 +298,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         currentView: action.payload,
       }
 
+    case "ADD_TO_NAVIGATION_HISTORY":
+      return {
+        ...state,
+        navigationHistory: [...state.navigationHistory, action.payload].slice(-10), // Keep last 10 entries
+      }
+
+    case "SET_LAST_SYNC":
+      return {
+        ...state,
+        lastSync: action.payload,
+      }
+
     case "COMPLETE_SETUP":
       return {
         ...state,
