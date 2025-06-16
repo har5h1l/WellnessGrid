@@ -2,53 +2,54 @@
 
 ## 🚀 Overview
 
-The WellnessGrid app now includes an AI-powered chat assistant that uses advanced Language Models to provide personalized health information. The chat is powered by BioGPT and BioGERT models via the Hugging Face Inference API.
+The WellnessGrid app now includes an AI-powered chat assistant that uses advanced Language Models to provide personalized health information. The chat is powered by BioGPT and BioBERT models via a **custom Flask backend** running in Google Colab with ngrok tunneling.
 
 ## 🏗️ Architecture
 
 ```
-User Message → Chat Page → /api/ask → Hugging Face API → AI Response → Chat UI
+User Message → Chat Page → /api/ask → Flask Backend (ngrok) → BioGPT/BioBERT → AI Response → Chat UI
 ```
 
 ### Components:
-- **API Route**: `app/api/ask/route.ts` - Handles LLM API calls
+- **API Route**: `app/api/ask/route.ts` - Handles Flask API calls
 - **Chat Page**: `app/chat/page.tsx` - Updated to use LLM API
+- **Flask Backend**: Custom backend running BioGPT and BioBERT models
 - **Mock Data**: Sample health documents for demonstration
 
 ## 🔧 Setup Instructions
 
-### 1. Start Development Server
+### 1. Configure Flask Backend URL
+Create `.env.local` file:
+```env
+FLASK_API_URL=http://localhost:5000
+```
+
+**Note**: Replace with your actual ngrok URL when the Flask backend is running in Colab.
+
+### 2. Start Development Server
 ```bash
 PORT=3001 npm run dev
 ```
 *Note: Using port 3001 to avoid conflicts with other services*
 
-### 2. Environment Variables (Optional)
-Create `.env.local` file:
-```env
-HUGGINGFACE_API_KEY=your_token_here
-```
-
-**Without Token**: App runs in demo mode with mock responses
-**With Token**: App uses real BioGPT and BioGERT models
-
-### 3. Get Hugging Face Token
-1. Visit: https://huggingface.co/settings/tokens
-2. Create a new token
-3. Add to your `.env.local` file
+### 3. Flask Backend Setup
+Your Flask backend should expose these endpoints:
+- `POST /embed` - BioBERT embedding generation
+- `POST /generate` - BioGPT text generation
+- `GET /health` - Health check (optional)
 
 ## 🧪 Testing
 
-### Test API Directly:
+### Test Flask Backend Directly:
 ```bash
-curl -X POST http://localhost:3001/api/ask \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is normal blood pressure?"}'
+node examples/test-flask-api.js
 ```
 
-### Test Chat Integration:
+### Test API Integration:
 ```bash
-node examples/test-chat-integration.js
+curl -X POST http://localhost:3001/api/ask \
+  -H "Content-Type": "application/json" \
+  -d '{"query": "What is normal blood pressure?"}'
 ```
 
 ### Test in Browser:
@@ -59,6 +60,11 @@ node examples/test-chat-integration.js
 
 ## 🎯 Features
 
+### ✅ **Custom Backend Integration**
+- Direct integration with Flask backend
+- No dependency on external API keys
+- Full control over model parameters
+
 ### ✅ **Context-Aware Responses**
 - Includes user's health conditions in queries
 - Personalized advice based on medical history
@@ -67,12 +73,8 @@ node examples/test-chat-integration.js
 - Shows which documents were used for responses
 - Displays similarity scores for transparency
 
-### ✅ **Mock Mode Indicator**
-- Clear indication when using demo data
-- Helps users understand response quality
-
 ### ✅ **Fallback System**
-- Graceful degradation if API fails
+- Graceful degradation if Flask backend fails
 - Local condition-specific responses as backup
 
 ### ✅ **Real-time Processing**
@@ -91,8 +93,44 @@ node examples/test-chat-integration.js
 - Medical domain-specific BERT model
 - Enables semantic similarity matching
 
-## 📊 API Response Format
+## 📊 API Communication
 
+### Flask Backend Expected Endpoints:
+
+#### Embedding Generation: `POST /embed`
+**Request:**
+```json
+{
+  "text": "What is diabetes and how to manage it?"
+}
+```
+
+**Response:**
+```json
+{
+  "embedding": [0.1, 0.2, 0.3, ...] // 768-dimensional vector
+}
+```
+
+#### Text Generation: `POST /generate`
+**Request:**
+```json
+{
+  "query": "What is diabetes?",
+  "context": "Document: Understanding Diabetes\nContent: ...",
+  "max_tokens": 200,
+  "temperature": 0.7
+}
+```
+
+**Response:**
+```json
+{
+  "answer": "Diabetes is a chronic condition..."
+}
+```
+
+### Next.js API Response Format:
 ```json
 {
   "query": "What is normal blood pressure?",
@@ -106,7 +144,7 @@ node examples/test-chat-integration.js
   "metadata": {
     "documentsUsed": 3,
     "processingTime": 1750036240558,
-    "mockMode": true
+    "mockMode": false
   }
 }
 ```
@@ -122,7 +160,8 @@ node examples/test-chat-integration.js
 - [ ] RAG (Retrieval-Augmented Generation) with vector database
 
 ### Scalability:
-- [ ] Pinecone/Weaviate integration for vector storage
+- [ ] Multiple Flask backend instances
+- [ ] Load balancing across backends
 - [ ] Redis caching for frequent queries
 - [ ] Rate limiting and usage analytics
 - [ ] Model fine-tuning on user data
@@ -131,23 +170,28 @@ node examples/test-chat-integration.js
 
 ### Common Issues:
 
-**404 Error on API calls**
-- Ensure server is running on port 3001
-- Check that API route file exists at `app/api/ask/route.ts`
+**Connection Refused or 500 Errors**
+- Ensure Flask backend is running and accessible
+- Check ngrok tunnel is active and URL is correct
+- Verify Flask endpoints are responding to requests
 
-**Long Response Times or "Error generating answer"**
-- First call to Hugging Face may take 30+ seconds (model loading)
-- Models need to "warm up" which can cause initial timeouts
-- Subsequent calls are much faster
-- If you get error messages, try the same query again
-- Consider implementing caching for production use
+**Long Response Times**
+- First call to models may take time for loading
+- Consider implementing model warming in Flask backend
+- Check network connectivity to ngrok tunnel
 
-**API Token Issues**
-- Verify token is correctly set in `.env.local`
-- Check token permissions on Hugging Face
-- App works without token in demo mode
+**Fallback to Mock Responses**
+- This happens when Flask backend is unavailable
+- Check console logs for specific error messages
+- Verify Flask API URL in environment variables
 
 ## 📝 Usage Examples
+
+### Environment Configuration:
+```bash
+# .env.local
+FLASK_API_URL=https://your-ngrok-url.ngrok.io
+```
 
 ### Basic Health Query:
 ```javascript
@@ -160,24 +204,35 @@ const response = await fetch('/api/ask', {
 });
 ```
 
-### Condition-Specific Query:
-```javascript
-const response = await fetch('/api/ask', {
-  method: 'POST', 
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ 
-    query: "I have asthma. What are early warning signs?" 
-  })
-});
+### Testing Flask Backend:
+```bash
+# Test embedding endpoint
+curl -X POST http://localhost:5000/embed \
+  -H "Content-Type: application/json" \
+  -d '{"text": "What is diabetes?"}'
+
+# Test generation endpoint  
+curl -X POST http://localhost:5000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is diabetes?", "context": "Medical context here", "max_tokens": 100, "temperature": 0.7}'
 ```
 
 ## 🔒 Security & Privacy
 
-- No personal health data is stored
-- Queries are processed securely via HTTPS
-- Hugging Face API calls are logged for debugging only
+- No personal health data stored in Flask backend
+- Queries processed through secure ngrok tunnel
 - All responses include medical disclaimer
 - Emergency situations redirect to professional help
+- Flask backend should implement proper security measures
+
+## 🚀 Deployment Notes
+
+### For Production:
+1. Deploy Flask backend to cloud service (GCP, AWS, Azure)
+2. Use proper domain instead of ngrok tunnel
+3. Implement authentication and rate limiting
+4. Add monitoring and logging
+5. Use load balancer for multiple backend instances
 
 ---
 

@@ -1,6 +1,23 @@
+// DEPRECATED: This file was used to test Hugging Face API directly
+// We now use Flask backend integration instead
+// Use examples/test-flask-api.js to test the new Flask backend
+
 const fetch = require('node-fetch');
 require('dotenv').config({ path: '.env.local' });
 
+console.log('⚠️  This test script is deprecated.');
+console.log('The WellnessGrid app now uses a Flask backend instead of direct Hugging Face API calls.');
+console.log('Please use the following instead:');
+console.log('');
+console.log('  1. Test Flask backend: node examples/test-flask-api.js');
+console.log('  2. Test integration: curl -X POST http://localhost:3001/api/ask \\');
+console.log('                            -H "Content-Type: application/json" \\');
+console.log('                            -d \'{"query": "What is diabetes?"}\'');
+console.log('');
+console.log('See FLASK_BACKEND_SETUP.md for complete setup instructions.');
+
+// Keep the old code commented for reference
+/*
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
 async function testEndpoint(url, model, payload) {
@@ -83,4 +100,5 @@ async function runTests() {
   }
 }
 
-runTests().catch(console.error); 
+runTests().catch(console.error);
+*/ 

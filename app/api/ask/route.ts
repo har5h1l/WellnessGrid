@@ -34,13 +34,8 @@ const MOCK_DOCUMENTS = [
   }
 ];
 
-// Hugging Face API configuration
-const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY;
-const HF_API_URL = 'https://api-inference.huggingface.co/models/';
-
-// Model configurations
-const BIOGPT_MODEL = 'microsoft/BioGPT-Large';
-const BIOBERT_MODEL = 'dmis-lab/biobert-base-cased-v1.1';
+// Flask API configuration via ngrok
+const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5000';
 
 interface Document {
   id: number;
@@ -51,36 +46,28 @@ interface Document {
 }
 
 async function generateEmbedding(text: string): Promise<number[]> {
-  // If no API token, return mock embedding immediately
-  if (!HF_API_TOKEN) {
-    console.log('No API token - using mock embedding');
-    return Array(768).fill(0).map(() => Math.random() - 0.5);
-  }
-
   try {
-    const response = await fetch(`${HF_API_URL}${BIOBERT_MODEL}`, {
+    console.log('Calling Flask API for embedding generation...');
+    
+    const response = await fetch(`${FLASK_API_BASE_URL}/embed`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${HF_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: text,
-        options: { wait_for_model: true }
+        text: text
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Embedding API error ${response.status}:`, errorText);
+      console.error(`Flask embedding API error ${response.status}:`, errorText);
       
       // Handle specific error cases gracefully
-      if (response.status === 401) {
-        console.warn('Invalid API token for embeddings - using mock embedding');
-      } else if (response.status === 429) {
-        console.warn('Rate limit exceeded for embeddings - using mock embedding');
-      } else if (response.status === 503) {
-        console.warn('Embedding model unavailable - using mock embedding');
+      if (response.status === 503) {
+        console.warn('Flask backend unavailable - using mock embedding');
+      } else if (response.status === 500) {
+        console.warn('Flask backend error - using mock embedding');
       }
       
       // Always fall back to mock embedding instead of throwing
@@ -88,87 +75,75 @@ async function generateEmbedding(text: string): Promise<number[]> {
     }
 
     const result = await response.json();
-    return result;
+    
+    // Flask API should return { embedding: [...] }
+    if (result.embedding && Array.isArray(result.embedding)) {
+      return result.embedding;
+    } else {
+      console.warn('Unexpected response format from Flask embedding API:', result);
+      return Array(768).fill(0).map(() => Math.random() - 0.5);
+    }
   } catch (error) {
-    console.error('Error generating embedding:', error);
+    console.error('Error calling Flask embedding API:', error);
     // Return mock embedding for demonstration
     return Array(768).fill(0).map(() => Math.random() - 0.5);
   }
 }
 
 async function generateAnswer(query: string, relevantDocs: Document[]): Promise<string> {
-  // If no API token, return mock answer immediately
-  if (!HF_API_TOKEN) {
-    console.log('No API token - using mock answer generation');
-    const context = relevantDocs.map(doc => doc.content).join(' ');
-    return `Based on the available health information, here's what I can tell you about "${query}": 
-      
-${relevantDocs[0]?.content || 'I found relevant information in our health database.'} 
-
-Please consult with a healthcare professional for personalized medical advice.`;
-  }
-
   try {
+    console.log('Calling Flask API for answer generation...');
+    
     // Construct context from relevant documents
     const context = relevantDocs.map(doc => 
       `Document: ${doc.title}\nContent: ${doc.content}`
     ).join('\n\n');
 
-    const prompt = `Based on the following medical and health information, answer the question: "${query}"\n\nContext:\n${context}\n\nAnswer:`;
-
-    const response = await fetch(`${HF_API_URL}${BIOGPT_MODEL}`, {
+    const response = await fetch(`${FLASK_API_BASE_URL}/generate`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${HF_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 200,
-          temperature: 0.7,
-          do_sample: true,
-          top_p: 0.9
-        },
-        options: { wait_for_model: true }
+        query: query,
+        context: context,
+        max_tokens: 200,
+        temperature: 0.7
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Generation API error ${response.status}:`, errorText);
+      console.error(`Flask generation API error ${response.status}:`, errorText);
       
-      // Handle specific error cases
-      if (response.status === 401) {
-        console.warn('Invalid API token - falling back to mock mode');
+      // Handle specific error cases with fallback responses
+      if (response.status === 503) {
+        console.warn('Flask backend unavailable - falling back to mock mode');
         return `Based on the available health information, here's what I can tell you about "${query}": 
         
 ${relevantDocs[0]?.content || 'I found relevant information in our health database.'} 
 
 Please consult with a healthcare professional for personalized medical advice.`;
-      } else if (response.status === 429) {
-        console.warn('Rate limit exceeded - falling back to mock mode');
-        return `I'm currently experiencing high demand. Based on the available health information: "${query}" - ${relevantDocs[0]?.content || 'Please try again in a moment.'}`;
-      } else if (response.status === 503) {
-        console.warn('Model unavailable - falling back to mock mode');
-        return `The AI model is currently loading. Based on our health database: "${query}" - ${relevantDocs[0]?.content || 'Please try again in a moment.'}`;
+      } else if (response.status === 500) {
+        console.warn('Flask backend error - falling back to mock mode');
+        return `I'm currently experiencing technical difficulties. Based on our health database: "${query}" - ${relevantDocs[0]?.content || 'Please try again in a moment.'}`;
       }
       
       // For other errors, fall back to mock response
-      throw new Error(`Generation API error: ${response.status} - ${errorText}`);
+      throw new Error(`Flask generation API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
     
-    // Extract the generated text, removing the prompt
-    let generatedText = result[0]?.generated_text || '';
-    if (generatedText.includes('Answer:')) {
-      generatedText = generatedText.split('Answer:')[1].trim();
+    // Flask API should return { answer: "..." }
+    if (result.answer && typeof result.answer === 'string') {
+      return result.answer;
+    } else {
+      console.warn('Unexpected response format from Flask generation API:', result);
+      return 'I apologize, but I cannot provide a complete answer based on the available information.';
     }
-    
-    return generatedText || 'I apologize, but I cannot provide a complete answer based on the available information.';
   } catch (error) {
-    console.error('Error generating answer:', error);
+    console.error('Error calling Flask generation API:', error);
     // Fallback to mock response
     return `Based on the available health information, here's what I can tell you about "${query}": 
     
@@ -205,11 +180,6 @@ function mockSearchDocuments(queryEmbedding: number[], topK: number = 3): Docume
 
 export async function POST(request: NextRequest) {
   try {
-    // Check for API token (allow running without token for development)
-    if (!HF_API_TOKEN) {
-      console.warn('Hugging Face API token not configured - running in mock mode');
-    }
-
     // Parse request body
     const body = await request.json();
     const { query } = body;
@@ -231,20 +201,11 @@ export async function POST(request: NextRequest) {
     console.log('Searching for relevant documents...');
     const relevantDocs = mockSearchDocuments(queryEmbedding, 3);
 
-    // Step 3: Generate answer using BioGPT with relevant documents
-    console.log('Generating answer with BioGPT...');
+    // Step 3: Generate answer using Flask with relevant documents
+    console.log('Generating answer with Flask...');
     let answer: string;
     
-    if (HF_API_TOKEN) {
-      answer = await generateAnswer(query, relevantDocs);
-    } else {
-      // Provide a mock answer based on the query and relevant docs
-      answer = `Based on the available health information, here's what I can tell you about "${query}": 
-      
-${relevantDocs[0]?.content || 'I found relevant information in our health database.'} 
-
-Please consult with a healthcare professional for personalized medical advice.`;
-    }
+    answer = await generateAnswer(query, relevantDocs);
 
     // Return the response
     return NextResponse.json({
@@ -257,7 +218,7 @@ Please consult with a healthcare professional for personalized medical advice.`;
       metadata: {
         documentsUsed: relevantDocs.length,
         processingTime: Date.now(),
-        mockMode: !HF_API_TOKEN
+        mockMode: false
       }
     });
 
