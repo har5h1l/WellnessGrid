@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration for your ngrok Flask server
 // You can update this URL when you get a new ngrok tunnel
-const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'https://4113-34-87-65-143.ngrok-free.app';
+const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'https://your-ngrok-url.ngrok-free.app';
 
 interface UserContext {
   healthConditions: string[];
