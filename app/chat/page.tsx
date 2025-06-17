@@ -106,14 +106,10 @@ export default function ChatAssistant() {
 
   const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean}> => {
     try {
-      // Create context-aware query with user's health information
-      let contextualQuery = userMessage;
-      
-      // Add user context to improve responses
-      if (conditions.length > 0) {
-        const conditionNames = conditions.map(c => c.name).join(', ');
-        contextualQuery = `I have ${conditionNames}. ${userMessage}`;
-      }
+      // Create user context with health conditions
+      const userContext = {
+        healthConditions: conditions.map(c => c.name)
+      };
 
       // Call our LLM API
       const response = await fetch('/api/ask', {
@@ -121,7 +117,10 @@ export default function ChatAssistant() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: contextualQuery }),
+        body: JSON.stringify({ 
+          query: userMessage,
+          userContext: userContext
+        }),
       });
 
       if (!response.ok) {
@@ -130,11 +129,11 @@ export default function ChatAssistant() {
 
       const data = await response.json();
       
-      // Return the full AI response data
+      // Return the full AI response data (updated to match new API format)
       return {
-        answer: data.answer || "I apologize, but I'm having trouble generating a response right now. Please try again.",
+        answer: data.response || "I apologize, but I'm having trouble generating a response right now. Please try again.",
         sources: data.sources,
-        mockMode: data.metadata?.mockMode
+        mockMode: data.mockMode
       };
       
     } catch (error) {
@@ -144,7 +143,7 @@ export default function ChatAssistant() {
       return {
         answer: generateFallbackResponse(userMessage),
         sources: undefined,
-        mockMode: false
+        mockMode: true
       };
     }
   }

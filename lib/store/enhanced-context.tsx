@@ -122,7 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // Only merge local data if we don't have user data from Supabase
             if (!state.user) {
               console.log("AppProvider: Loading saved local data")
-              dispatch({ type: "SYNC_DATA", payload: savedData })
+            dispatch({ type: "SYNC_DATA", payload: savedData })
             }
           }
         } catch (error) {
