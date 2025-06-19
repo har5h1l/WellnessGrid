@@ -20,6 +20,7 @@ interface AIMessage {
   suggestions?: string[];
   sources?: Array<{
     title: string;
+    content?: string;
     similarity: string;
   }>;
   mockMode?: boolean;
@@ -276,7 +277,17 @@ export default function ChatAssistant() {
     )
   }
 
-  const aiMessages = AppSelectors.getRecentAIMessages(state)
+  // Temporarily get all AI messages for debugging
+  const aiMessages = state.aiMessages.slice(-50)
+
+  // Debug logging
+  console.log('Chat Debug Info:', {
+    userId: state.user?.id,
+    totalAIMessages: state.aiMessages.length,
+    filteredAIMessages: aiMessages.length,
+    allMessages: state.aiMessages,
+    user: state.user
+  })
 
   return (
     <div className="min-h-screen wellness-gradient pb-20">
