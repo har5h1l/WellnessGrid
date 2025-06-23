@@ -1,175 +1,99 @@
 # WellnessGrid App 🏥
 
-> An AI-powered personal health companion designed specifically for teens to track symptoms, manage health conditions, and receive personalized guidance.
+A comprehensive health and wellness tracking application built with Next.js, TypeScript, and Supabase.
 
-## 🌟 Overview
+## 🚀 Quick Start
 
-WellnessGrid is a comprehensive health tracking and management platform that combines modern web technologies with AI-powered insights. The app helps teenagers take control of their health journey by providing personalized tracking tools, AI chat support, and evidence-based health information.
-
-### ✨ Key Features
-
-- **🤖 AI Health Companion**: 24/7 chat support with specialized medical AI models (BioGPT & BioBERT)
-- **📊 Comprehensive Health Tracking**: Monitor symptoms, mood, medications, vital signs, and more
-- **🎯 Personalized Protocols**: Custom care plans designed by healthcare professionals
-- **📈 Smart Analytics**: Identify patterns and trends in your health data
-- **👥 Family Sharing**: Generate reports to share with parents and doctors
-- **🔒 Privacy-First**: Secure data handling with user-controlled privacy settings
-
-## 🚀 Tech Stack
-
-### Frontend
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **Radix UI** - Accessible component primitives
-- **Shadcn/ui** - Modern UI component library
-- **Recharts** - Data visualization
-
-### Backend & Database
-- **Supabase** - PostgreSQL database with real-time capabilities
-- **Row Level Security (RLS)** - User data isolation
-- **Supabase Auth** - User authentication and management
-
-### AI Integration
-- **Custom Flask Backend** - Running BioGPT and BioBERT models
-- **BioGPT-Large** - Medical text generation
-- **BioBERT** - Medical document embeddings and search
-- **ngrok** - Secure tunneling for development
-
-### Development Tools
-- **pnpm** - Fast package manager
-- **ESLint** - Code linting
-- **Prettier** - Code formatting
-
-## 📦 Installation
-
-### Prerequisites
-- Node.js 18+ 
-- pnpm (recommended) or npm
-- Supabase account
-- (Optional) Google Colab for AI backend
-
-### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/wellnessgrid-app.git
-cd wellnessgrid-app
-```
-**Note:** Replace `yourusername` with your actual GitHub username.
-
-### 2. Install Dependencies
-```bash
-pnpm install
-# or
+# Install dependencies
 npm install
-```
 
-### 3. Environment Setup
-Create `.env.local` file:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-FLASK_API_URL=your_flask_backend_url
-```
-**⚠️ Security Note:** Never commit your `.env.local` file to version control. Add it to your `.gitignore` file.
+# Set up environment variables
+cp .env.example .env.local
 
-### 4. Database Setup
-Follow the detailed instructions in [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) to:
-- Create Supabase project
-- Set up database schema
-- Configure authentication
-- Enable Row Level Security
-
-### 5. Start Development Server
-```bash
-pnpm dev
-# or
+# Run development server
 npm run dev
 ```
 
-Visit `http://localhost:3000` to see the app in action!
-
-## 🏗️ Project Structure
+## 📁 Project Structure
 
 ```
-WellnessGrid App/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── dashboard/         # Main dashboard
-│   ├── chat/             # AI chat interface  
-│   ├── profile/          # User profile management
-│   └── track/            # Health tracking tools
-├── components/            # Reusable React components
-│   ├── ui/               # Shadcn/ui components
-│   ├── *-tracker.tsx     # Health tracking components
-│   └── navigation/       # Navigation components
-├── lib/                  # Utility libraries
-│   ├── database/         # Supabase integration
+├── app/                    # Next.js app router pages
+├── components/             # React components
+│   ├── ui/                # Reusable UI components
+│   └── ...               # Feature-specific components
+├── lib/                   # Utilities and shared logic
+│   ├── database/         # Database schemas and types
 │   ├── store/           # State management
-│   └── types/           # TypeScript definitions
-├── hooks/               # Custom React hooks
-├── styles/              # Global styles
-└── public/              # Static assets
+│   └── types/           # TypeScript type definitions
+├── docs/                  # 📚 Documentation
+│   ├── supabase-setup.md
+│   ├── tools-implementation.md
+│   ├── rag-upgrade-guide.md
+│   └── archive/         # Deprecated docs
+├── notebooks/             # 📓 Jupyter notebooks
+│   └── query_rag_system.ipynb
+├── scripts/               # 🐍 Python scripts
+│   └── embed_documents.py
+├── tests/                 # 🧪 Test files
+├── public/               # Static assets
+└── styles/               # Global styles
 ```
 
-## 🔧 Configuration
+## 🏗️ Architecture
 
-### Supabase Setup
-Detailed instructions available in [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md)
+- **Frontend**: Next.js 14 with TypeScript
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **AI/ML**: RAG system with PubMedBERT embeddings
+- **State Management**: Custom React Context
+- **Styling**: Tailwind CSS + shadcn/ui
 
-### AI Backend Setup  
-See [`LLM_INTEGRATION.md`](./LLM_INTEGRATION.md) for Flask backend configuration
+## 🔧 Key Features
 
-### Flask Backend Setup
-Instructions in [`FLASK_BACKEND_SETUP.md`](./FLASK_BACKEND_SETUP.md)
+- 📊 Health tracking tools (sleep, nutrition, mood, etc.)
+- 🤖 AI-powered medical chat assistant
+- 📱 Responsive mobile-first design
+- 🔐 Secure authentication and data storage
+- 📈 Health analytics and insights
+- 📚 Medical knowledge base with RAG
 
-## 🎯 Core Features
+## 📚 Documentation
 
-### Health Tracking Tools
-- **Glucose Tracker** - Blood sugar monitoring for diabetes management
-- **Mood Tracker** - Daily mood and mental health monitoring
-- **Symptom Tracker** - Comprehensive symptom logging with severity tracking
-- **Medication Logger** - Adherence tracking and reminder system
-- **Vital Signs Tracker** - Blood pressure, heart rate, temperature monitoring
-- **Sleep Tracker** - Sleep quality and duration monitoring
-- **Nutrition Tracker** - Food intake and dietary monitoring
-- **Hydration Tracker** - Daily water intake tracking
+Visit the [`docs/`](./docs/) directory for detailed setup guides:
 
-### AI-Powered Features
-- **Intelligent Chat Assistant** - Contextual health advice using BioGPT
-- **Document Search** - BioBERT-powered medical document retrieval
-- **Pattern Recognition** - AI identifies trends in health data
-- **Personalized Recommendations** - Context-aware health suggestions
-
-### User Experience
-- **Responsive Design** - Works seamlessly on mobile and desktop
-- **Dark/Light Theme** - User preference support
-- **Accessibility** - WCAG compliant interface
-- **Progressive Web App** - Installable on mobile devices
-
-## 🔐 Security & Privacy
-
-- **End-to-End Security** - All data encrypted in transit and at rest
-- **Row Level Security** - Database-level user isolation
-- **HIPAA Considerations** - Privacy-first architecture
-- **Local Data Control** - Users control their data sharing preferences
-- **Audit Logging** - Track data access and modifications
-
-## 📱 Usage
-
-### Getting Started
-1. **Create Account** - Sign up with email and password
-2. **Complete Setup** - Add health conditions and preferences
-3. **Select Tools** - Choose relevant tracking tools
-4. **Start Tracking** - Begin logging health data daily
-5. **Chat with AI** - Ask questions and get personalized advice
-
-### Daily Workflow
-1. **Morning Check-in** - Review overnight data and set daily goals
-2. **Track Throughout Day** - Log symptoms, medications, meals
-3. **Evening Review** - Analyze daily patterns and trends
-4. **Weekly Reports** - Generate summaries for healthcare providers
+- [Supabase Setup](./docs/supabase-setup.md)
+- [Tools Implementation](./docs/tools-implementation.md)
+- [RAG System Guide](./docs/rag-upgrade-guide.md)
 
 ## 🧪 Testing
+
+```bash
+# Run development server
+npm run dev
+
+# Set up medical database
+python scripts/embed_documents.py
+
+# Test API endpoints
+npx ts-node tests/test-ask-api.ts
+
+# Test Supabase connection
+npx ts-node tests/test-supabase.ts
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+
 
 ### Run Tests
 ```bash

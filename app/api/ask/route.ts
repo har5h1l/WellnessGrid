@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// Configuration for your ngrok Flask server
-// You can update this URL when you get a new ngrok tunnel
+// Supabase configuration
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// Flask backend configuration (your existing setup)
 const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5000';
 
 interface UserContext {
@@ -11,15 +15,182 @@ interface UserContext {
 
 interface Source {
   title: string;
-  content: string;
-  similarity?: number;
+  source: string;
+  similarity: string;
+  rank: number;
 }
 
-interface FlaskResponse {
-  response: string;
+interface RAGResponse {
+  query: string;
+  answer: string;
   sources: Source[];
-  mockMode: boolean;
-  error?: string;
+  metadata: {
+    documentsUsed: number;
+    totalFound: number;
+    contextLength: number;
+    flaskBackendUsed: boolean;
+    processingTime: string;
+  };
+}
+
+// Supabase RAG System (simplified version for API usage)
+class SupabaseRAGSystem {
+  private supabase;
+  
+  constructor() {
+    this.supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  
+  async searchSimilarDocuments(queryEmbedding: number[], topK: number = 5, threshold: number = 0.5) {
+    try {
+      // Use the RPC function for efficient vector search
+      const { data, error } = await this.supabase.rpc('search_embeddings', {
+        query_embedding: queryEmbedding,
+        match_threshold: threshold,
+        match_count: topK
+      });
+      
+      if (error) {
+        console.error('Supabase RPC error:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error searching documents:', error);
+      return [];
+    }
+  }
+  
+  async generateResponse(query: string, context: string): Promise<string | null> {
+    try {
+      // Call your existing Flask /generate endpoint
+      const response = await fetch(`${FLASK_API_BASE_URL}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({
+          query: query,
+          context: context,
+          max_tokens: 200,
+          temperature: 0.7
+        }),
+        signal: AbortSignal.timeout(30000) // 30 second timeout
+      });
+      
+      if (!response.ok) {
+        console.error(`Flask generate error: ${response.status}`);
+        return null;
+      }
+      
+      const result = await response.json();
+      return result.answer || null;
+    } catch (error) {
+      console.error('Error calling Flask backend:', error);
+      return null;
+    }
+  }
+  
+  async getQueryEmbedding(query: string): Promise<number[] | null> {
+    try {
+      // Call your existing Flask /embed endpoint
+      const response = await fetch(`${FLASK_API_BASE_URL}/embed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({ text: query }),
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
+      
+      if (!response.ok) {
+        console.error(`Flask embed error: ${response.status}`);
+        return null;
+      }
+      
+      const result = await response.json();
+      return result.embedding || null;
+    } catch (error) {
+      console.error('Error getting embedding:', error);
+      return null;
+    }
+  }
+  
+  async query(question: string): Promise<RAGResponse> {
+    const startTime = Date.now();
+    
+    // Step 1: Get query embedding using Flask backend
+    const queryEmbedding = await this.getQueryEmbedding(question);
+    
+    if (!queryEmbedding) {
+      // Fallback response when embedding fails
+      return {
+        query: question,
+        answer: "I'm currently experiencing technical difficulties with the embedding service. Please try again later or consult with a healthcare professional for immediate assistance.",
+        sources: [],
+        metadata: {
+          documentsUsed: 0,
+          totalFound: 0,
+          contextLength: 0,
+          flaskBackendUsed: false,
+          processingTime: new Date().toISOString()
+        }
+      };
+    }
+    
+    // Step 2: Search for similar documents in Supabase
+    const similarDocs = await this.searchSimilarDocuments(queryEmbedding);
+    
+    // Step 3: Prepare context from retrieved documents
+    const contextParts: string[] = [];
+    let totalChars = 0;
+    const maxContextLength = 2000;
+    
+    for (const doc of similarDocs) {
+      const docText = `Source: ${doc.source}\n${doc.chunk_content}`;
+      if (totalChars + docText.length <= maxContextLength) {
+        contextParts.push(docText);
+        totalChars += docText.length;
+      } else {
+        break;
+      }
+    }
+    
+    const context = contextParts.join('\n\n');
+    
+    // Step 4: Generate response using Flask backend
+    let generatedAnswer = null;
+    if (context.length > 0) {
+      generatedAnswer = await this.generateResponse(question, context);
+    }
+    
+    // Step 5: Prepare final response
+    const answer = generatedAnswer || 
+      (similarDocs.length > 0 
+        ? "Based on the available medical information, I found relevant context but couldn't generate a response. Please consult with a healthcare professional for specific medical advice."
+        : "I couldn't find relevant information for your query. Please consult with a healthcare professional for medical advice.");
+    
+    return {
+      query: question,
+      answer: answer,
+      sources: similarDocs.map((doc, index) => ({
+        title: doc.title || 'Medical Information',
+        source: doc.source,
+        similarity: doc.similarity.toFixed(3),
+        rank: index + 1
+      })),
+      metadata: {
+        documentsUsed: contextParts.length,
+        totalFound: similarDocs.length,
+        contextLength: context.length,
+        flaskBackendUsed: !!generatedAnswer,
+        processingTime: new Date().toISOString()
+      }
+    };
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,68 +206,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Processing query:', query);
+    console.log('Processing query with Supabase RAG:', query);
     console.log('User context:', userContext);
-    console.log('Using Flask URL:', FLASK_API_BASE_URL);
 
-    // Call your Flask API running on ngrok
-    const response = await fetch(`${FLASK_API_BASE_URL}/ask`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add ngrok bypass header if needed
-        'ngrok-skip-browser-warning': 'true'
-      },
-      body: JSON.stringify({
-        query: query,
-        userContext: userContext || {}
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Flask API error ${response.status}:`, errorText);
-      
-      return NextResponse.json({
-        response: "I'm currently experiencing technical difficulties connecting to the AI service. Please try again in a moment or consult with a healthcare professional for immediate assistance.",
-        sources: [],
-        mockMode: true,
-        error: `Flask API error: ${response.status}`
-      }, { status: 500 });
-    }
-
-    const result: FlaskResponse = await response.json();
+    // Initialize Supabase RAG system
+    const ragSystem = new SupabaseRAGSystem();
     
-    console.log('Flask API response:', {
-      responseLength: result.response?.length,
+    // Process the query using the RAG system
+    const result = await ragSystem.query(query);
+    
+    console.log('RAG response:', {
+      answerLength: result.answer?.length,
       sourcesCount: result.sources?.length,
-      mockMode: result.mockMode
+      documentsUsed: result.metadata.documentsUsed,
+      flaskBackendUsed: result.metadata.flaskBackendUsed
     });
 
-    // Return the response from your Flask API
+    // Return the response in the same format as before for compatibility
     return NextResponse.json({
-      response: result.response,
-      sources: result.sources || [],
-      mockMode: result.mockMode || false,
-      error: result.error
+      query: result.query,
+      answer: result.answer,
+      sources: result.sources,
+      metadata: result.metadata
     });
 
   } catch (error) {
     console.error('Error in /api/ask:', error);
     
     return NextResponse.json({
-      response: "I apologize, but I'm having trouble connecting to the health information service. Please try again later or consult with a healthcare professional for immediate assistance.",
+      query: body?.query || '',
+      answer: "I apologize, but I'm having trouble processing your request. Please try again later or consult with a healthcare professional for immediate assistance.",
       sources: [],
-      mockMode: true,
+      metadata: {
+        documentsUsed: 0,
+        totalFound: 0,
+        contextLength: 0,
+        flaskBackendUsed: false,
+        processingTime: new Date().toISOString()
+      },
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
 
 export async function GET() {
+  try {
+    // Test Supabase connection
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data, error } = await supabase.from('medical_documents').select('*', { count: 'exact', head: true });
+    
+    const docCount = data?.length || 0;
+    
   return NextResponse.json({ 
-    message: 'WellnessGrid AI API is running',
+      message: 'WellnessGrid AI API is running with Supabase RAG',
+      supabaseConnected: !error,
+      documentsInDatabase: docCount,
     flaskUrl: FLASK_API_BASE_URL,
     timestamp: new Date().toISOString()
   });
+  } catch (error) {
+    return NextResponse.json({
+      message: 'WellnessGrid AI API is running with limited functionality',
+      supabaseConnected: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 } 

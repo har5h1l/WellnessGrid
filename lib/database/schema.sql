@@ -191,6 +191,111 @@ CREATE TABLE public.user_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Enable pgvector extension for vector similarity search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create medical_documents table for storing medical content
+CREATE TABLE IF NOT EXISTS medical_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    source TEXT NOT NULL,
+    topic TEXT,
+    url TEXT,
+    document_type TEXT,
+    metadata JSONB DEFAULT '{}',
+    content_length INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create document_embeddings table with pgvector support
+CREATE TABLE IF NOT EXISTS document_embeddings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID REFERENCES medical_documents(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    chunk_content TEXT NOT NULL,
+    embedding VECTOR(768), -- PubMedBERT embeddings are 768-dimensional
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_medical_documents_source ON medical_documents(source);
+CREATE INDEX IF NOT EXISTS idx_medical_documents_topic ON medical_documents(topic);
+CREATE INDEX IF NOT EXISTS idx_medical_documents_type ON medical_documents(document_type);
+CREATE INDEX IF NOT EXISTS idx_document_embeddings_document_id ON document_embeddings(document_id);
+
+-- Create vector similarity search index (HNSW for better performance)
+CREATE INDEX IF NOT EXISTS idx_document_embeddings_vector 
+ON document_embeddings USING hnsw (embedding vector_cosine_ops);
+
+-- Create updated_at trigger for medical_documents
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_medical_documents_updated_at 
+    BEFORE UPDATE ON medical_documents 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create RPC function for efficient vector similarity search
+CREATE OR REPLACE FUNCTION search_embeddings(
+    query_embedding VECTOR(768),
+    match_threshold FLOAT DEFAULT 0.5,
+    match_count INT DEFAULT 5
+)
+RETURNS TABLE (
+    chunk_content TEXT,
+    similarity FLOAT,
+    source TEXT,
+    topic TEXT,
+    title TEXT,
+    document_type TEXT,
+    document_id UUID
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        de.chunk_content,
+        1 - (de.embedding <=> query_embedding) AS similarity,
+        md.source,
+        md.topic,
+        md.title,
+        md.document_type,
+        md.id AS document_id
+    FROM document_embeddings de
+    JOIN medical_documents md ON de.document_id = md.id
+    WHERE 1 - (de.embedding <=> query_embedding) > match_threshold
+    ORDER BY de.embedding <=> query_embedding
+    LIMIT match_count;
+END;
+$$;
+
+-- Create RPC function to get document statistics
+CREATE OR REPLACE FUNCTION get_document_stats()
+RETURNS TABLE (
+    source TEXT,
+    count BIGINT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        md.source,
+        COUNT(*) as count
+    FROM medical_documents md
+    GROUP BY md.source
+    ORDER BY count DESC;
+END;
+$$;
+
 -- Create indexes for better performance
 CREATE INDEX idx_health_conditions_user_id ON public.health_conditions(user_id);
 CREATE INDEX idx_user_tools_user_id ON public.user_tools(user_id);

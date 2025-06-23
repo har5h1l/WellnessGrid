@@ -1,0 +1,390 @@
+{
+  "medical_sources": {
+    "clinical_databases": {
+      "title": "Major Clinical Databases and Research",
+      "priority": "high",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://clinicaltrials.gov/api/v2/studies",
+          "title": "ClinicalTrials.gov API - Clinical Studies Database",
+          "description": "Comprehensive database of clinical studies conducted around the world",
+          "category": "clinical_research",
+          "subcategory": "trials",
+          "api_params": {
+            "format": "json",
+            "countTotal": "true",
+            "pageSize": "50"
+          }
+        },
+        {
+          "type": "dataset",
+          "url": "https://physionet.org/content/mimiciii/1.4/",
+          "title": "MIMIC-III Clinical Database",
+          "description": "Deidentified health data from 40,000+ ICU patients at Beth Israel Deaconess Medical Center",
+          "category": "clinical_research",
+          "subcategory": "icu_data"
+        },
+        {
+          "type": "dataset", 
+          "url": "https://physionet.org/content/mimiciv/3.1/",
+          "title": "MIMIC-IV Clinical Database",
+          "description": "Updated version with data from 65,000+ ICU patients and 200,000+ emergency department patients",
+          "category": "clinical_research",
+          "subcategory": "icu_data"
+        },
+        {
+          "type": "dataset",
+          "url": "https://github.com/medmcqa/medmcqa",
+          "title": "MedMCQA - Medical Multiple Choice Question Answering Dataset",
+          "description": "Large-scale medical question answering dataset for medical education and assessment",
+          "category": "medical_education",
+          "subcategory": "qa_dataset"
+        }
+      ]
+    },
+    "who_data": {
+      "title": "World Health Organization Data Sources",
+      "priority": "high",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://ghoapi.azureedge.net/api/Indicator",
+          "title": "WHO Global Health Observatory - Health Indicators",
+          "description": "Comprehensive global health statistics and indicators from WHO",
+          "category": "global_health",
+          "subcategory": "statistics"
+        },
+        {
+          "type": "api",
+          "url": "https://ghoapi.azureedge.net/api/WHOSIS_000001",
+          "title": "WHO Life Expectancy Data",
+          "description": "Global life expectancy statistics by country and demographic",
+          "category": "global_health",
+          "subcategory": "mortality"
+        },
+        {
+          "type": "api",
+          "url": "https://apps.who.int/gho/athena/api/GHO",
+          "title": "WHO Athena API - Global Health Data",
+          "description": "WHO's comprehensive health data API with multiple endpoints",
+          "category": "global_health",
+          "subcategory": "comprehensive"
+        },
+        {
+          "type": "url",
+          "url": "https://www.who.int/data/collections",
+          "title": "WHO Data Collections Portal",
+          "description": "Central repository for WHO's health data collections and datasets",
+          "category": "global_health",
+          "subcategory": "portal"
+        }
+      ]
+    },
+    "cdc_data": {
+      "title": "Centers for Disease Control and Prevention Data",
+      "priority": "high",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://data.cdc.gov/resource/hk9y-quqm.json",
+          "title": "CDC COVID-19 Data",
+          "description": "Comprehensive COVID-19 surveillance and vaccination data",
+          "category": "infectious_disease",
+          "subcategory": "covid19"
+        },
+        {
+          "type": "api",
+          "url": "https://data.cdc.gov/resource/cjae-szjv.json",
+          "title": "CDC Vaccination Coverage Data",
+          "description": "National and state-level vaccination coverage statistics",
+          "category": "prevention",
+          "subcategory": "vaccination"
+        },
+        {
+          "type": "api",
+          "url": "https://wonder.cdc.gov/controller/datarequest/D76",
+          "title": "CDC WONDER Mortality Database",
+          "description": "Detailed mortality statistics and cause of death data",
+          "category": "mortality",
+          "subcategory": "statistics"
+        },
+        {
+          "type": "api",
+          "url": "https://ephtracking.cdc.gov/apigateway/api/v1",
+          "title": "CDC Environmental Health Tracking Network",
+          "description": "Environmental health data and disease tracking",
+          "category": "environmental_health",
+          "subcategory": "tracking"
+        },
+        {
+          "type": "api",
+          "url": "https://tools.cdc.gov/api/v2",
+          "title": "CDC Content Syndication API",
+          "description": "CDC health content and educational materials",
+          "category": "health_education",
+          "subcategory": "content"
+        }
+      ]
+    },
+    "nih_nlm_data": {
+      "title": "National Institutes of Health and National Library of Medicine",
+      "priority": "high",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+          "title": "PubMed/MEDLINE Database API",
+          "description": "Comprehensive biomedical literature database",
+          "category": "research_literature",
+          "subcategory": "pubmed",
+          "api_params": {
+            "db": "pubmed",
+            "retmode": "json",
+            "retmax": "1000"
+          }
+        },
+        {
+          "type": "api",
+          "url": "https://pmc.ncbi.nlm.nih.gov/tools/openftlist/",
+          "title": "PMC Open Access Subset",
+          "description": "Full-text articles from PubMed Central open access collection",
+          "category": "research_literature",
+          "subcategory": "full_text"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/xml.html",
+          "title": "MedlinePlus Health Information",
+          "description": "Consumer health information from the National Library of Medicine",
+          "category": "patient_education",
+          "subcategory": "general"
+        }
+      ]
+    },
+    "fda_data": {
+      "title": "Food and Drug Administration Data",
+      "priority": "medium",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://api.fda.gov/drug/event.json",
+          "title": "FDA Adverse Event Reporting System (FAERS)",
+          "description": "Drug adverse event reports and safety data",
+          "category": "drug_safety",
+          "subcategory": "adverse_events"
+        },
+        {
+          "type": "api",
+          "url": "https://api.fda.gov/drug/label.json",
+          "title": "FDA Drug Labels Database",
+          "description": "Prescription and over-the-counter drug labeling information",
+          "category": "drug_information",
+          "subcategory": "labels"
+        },
+        {
+          "type": "api",
+          "url": "https://api.fda.gov/device/event.json",
+          "title": "FDA Medical Device Adverse Events",
+          "description": "Medical device adverse event reports",
+          "category": "device_safety",
+          "subcategory": "adverse_events"
+        },
+        {
+          "type": "api",
+          "url": "https://api.fda.gov/food/enforcement.json",
+          "title": "FDA Food Enforcement Reports",
+          "description": "Food safety recalls and enforcement actions",
+          "category": "food_safety",
+          "subcategory": "enforcement"
+        }
+      ]
+    },
+    "medical_datasets": {
+      "title": "Open Medical Datasets and Research Collections",
+      "priority": "medium",
+      "sources": [
+        {
+          "type": "dataset",
+          "url": "https://github.com/openmedlab/Awesome-Medical-Dataset",
+          "title": "Awesome Medical Dataset Collection",
+          "description": "Curated list of medical datasets for machine learning and research",
+          "category": "research_datasets",
+          "subcategory": "collection"
+        },
+        {
+          "type": "dataset",
+          "url": "https://physionet.org/content/mimiciii-demo/1.4/",
+          "title": "MIMIC-III Demo Dataset",
+          "description": "Publicly available demo version of MIMIC-III for testing and development",
+          "category": "clinical_research",
+          "subcategory": "demo_data"
+        },
+        {
+          "type": "url",
+          "url": "https://www.cancerimagingarchive.net/",
+          "title": "The Cancer Imaging Archive (TCIA)",
+          "description": "Large archive of medical images of cancer for research",
+          "category": "medical_imaging",
+          "subcategory": "cancer"
+        }
+      ]
+    },
+    "disease_specific": {
+      "title": "Disease-Specific Medical Information",
+      "priority": "medium",
+      "sources": [
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/diabetes.html",
+          "title": "MedlinePlus - Diabetes Information",
+          "description": "Comprehensive diabetes information for patients and families",
+          "category": "diabetes",
+          "subcategory": "patient_info"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/heartdisease.html",
+          "title": "MedlinePlus - Heart Disease",
+          "description": "Heart disease prevention, symptoms, and treatment information",
+          "category": "cardiovascular",
+          "subcategory": "patient_info"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/cancer.html",
+          "title": "MedlinePlus - Cancer Information",
+          "description": "Cancer types, treatment options, and support resources",
+          "category": "oncology",
+          "subcategory": "patient_info"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/mentalhealth.html",
+          "title": "MedlinePlus - Mental Health",
+          "description": "Mental health conditions, treatments, and support resources",
+          "category": "mental_health",
+          "subcategory": "patient_info"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/infectiousdiseases.html",
+          "title": "MedlinePlus - Infectious Diseases",
+          "description": "Information on infectious diseases, prevention, and treatment",
+          "category": "infectious_disease",
+          "subcategory": "patient_info"
+        }
+      ]
+    },
+    "pharmacology": {
+      "title": "Drug and Pharmaceutical Information",
+      "priority": "medium",
+      "sources": [
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/druginformation.html",
+          "title": "MedlinePlus - Drug Information",
+          "description": "Comprehensive drug information including side effects and interactions",
+          "category": "pharmacology",
+          "subcategory": "drug_info"
+        },
+        {
+          "type": "api",
+          "url": "https://rxnav.nlm.nih.gov/REST/",
+          "title": "RxNorm API - Drug Nomenclature",
+          "description": "Standardized drug nomenclature and terminology",
+          "category": "pharmacology",
+          "subcategory": "nomenclature"
+        }
+      ]
+    },
+    "medical_terminology": {
+      "title": "Medical Terminology and Standards",
+      "priority": "low",
+      "sources": [
+        {
+          "type": "api",
+          "url": "https://uts-ws.nlm.nih.gov/rest/",
+          "title": "UMLS Terminology Services",
+          "description": "Unified Medical Language System for medical terminology",
+          "category": "terminology",
+          "subcategory": "umls"
+        },
+        {
+          "type": "url",
+          "url": "https://www.nlm.nih.gov/research/umls/",
+          "title": "UMLS Knowledge Sources",
+          "description": "Medical vocabularies and classification systems",
+          "category": "terminology",
+          "subcategory": "standards"
+        }
+      ]
+    }
+  },
+  "custom_documents": {
+    "wellness_guides": {
+      "title": "Wellness and Prevention Guides",
+      "priority": "medium",
+      "sources": [
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/healthyliving.html",
+          "title": "MedlinePlus - Healthy Living",
+          "description": "Comprehensive guide to healthy lifestyle choices",
+          "category": "wellness",
+          "subcategory": "lifestyle"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/exerciseandphysicalfitness.html",
+          "title": "MedlinePlus - Exercise and Physical Fitness",
+          "description": "Exercise guidelines and physical fitness information",
+          "category": "wellness",
+          "subcategory": "fitness"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/nutrition.html",
+          "title": "MedlinePlus - Nutrition",
+          "description": "Nutritional guidelines and dietary information",
+          "category": "wellness",
+          "subcategory": "nutrition"
+        }
+      ]
+    },
+    "emergency_medicine": {
+      "title": "Emergency and Critical Care Medicine",
+      "priority": "high",
+      "sources": [
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/firstaid.html",
+          "title": "MedlinePlus - First Aid",
+          "description": "Emergency first aid procedures and guidelines",
+          "category": "emergency_medicine",
+          "subcategory": "first_aid"
+        },
+        {
+          "type": "url",
+          "url": "https://medlineplus.gov/poisoning.html",
+          "title": "MedlinePlus - Poisoning",
+          "description": "Poisoning prevention, recognition, and treatment",
+          "category": "emergency_medicine",
+          "subcategory": "toxicology"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "version": "2.0",
+    "last_updated": "2024-01-15",
+    "total_sources": 35,
+    "description": "Comprehensive collection of credible, open-source medical data sources including major databases, APIs, and educational content from WHO, CDC, NIH, FDA, and other authoritative medical institutions",
+    "notes": [
+      "All sources are from verified, authoritative medical organizations",
+      "APIs may require registration or rate limiting",
+      "Some datasets require credentialed access (MIMIC databases)",
+      "Content is suitable for medical AI and educational applications"
+    ]
+  }
+} 
