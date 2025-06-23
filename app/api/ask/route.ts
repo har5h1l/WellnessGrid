@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Flask backend configuration (your existing setup)
+// Flask backend configuration (for embeddings and text generation)
 const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5000';
 
 interface UserContext {
@@ -33,38 +33,36 @@ interface RAGResponse {
   };
 }
 
-// Supabase RAG System (simplified version for API usage)
 class SupabaseRAGSystem {
   private supabase;
-  
+
   constructor() {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
-  
+
   async searchSimilarDocuments(queryEmbedding: number[], topK: number = 5, threshold: number = 0.5) {
     try {
-      // Use the RPC function for efficient vector search
       const { data, error } = await this.supabase.rpc('search_embeddings', {
         query_embedding: queryEmbedding,
         match_threshold: threshold,
         match_count: topK
       });
-      
+
       if (error) {
-        console.error('Supabase RPC error:', error);
+        console.error('Supabase search error:', error);
         return [];
       }
-      
+
       return data || [];
     } catch (error) {
-      console.error('Error searching documents:', error);
+      console.error('Error searching similar documents:', error);
       return [];
     }
   }
-  
+
   async generateResponse(query: string, context: string): Promise<string | null> {
     try {
-      // Call your existing Flask /generate endpoint
+      // Call Flask /generate endpoint for GPU-accelerated text generation
       const response = await fetch(`${FLASK_API_BASE_URL}/generate`, {
         method: 'POST',
         headers: {
@@ -95,7 +93,8 @@ class SupabaseRAGSystem {
   
   async getQueryEmbedding(query: string): Promise<number[] | null> {
     try {
-      // Call your existing Flask /embed endpoint
+      console.log('🔍 Generating PubMedBERT embedding via Flask...');
+      // Call Flask /embed endpoint for PubMedBERT embeddings (medical accuracy)
       const response = await fetch(`${FLASK_API_BASE_URL}/embed`, {
         method: 'POST',
         headers: {
@@ -112,17 +111,18 @@ class SupabaseRAGSystem {
       }
       
       const result = await response.json();
+      console.log(`✅ Generated PubMedBERT embedding (${result.embedding?.length || 0} dimensions)`);
       return result.embedding || null;
     } catch (error) {
-      console.error('Error getting embedding:', error);
+      console.error('Error generating PubMedBERT embedding:', error);
       return null;
     }
   }
-  
+
   async query(question: string): Promise<RAGResponse> {
     const startTime = Date.now();
     
-    // Step 1: Get query embedding using Flask backend
+    // Step 1: Get query embedding using Flask PubMedBERT (medical accuracy)
     const queryEmbedding = await this.getQueryEmbedding(question);
     
     if (!queryEmbedding) {
@@ -161,7 +161,7 @@ class SupabaseRAGSystem {
     
     const context = contextParts.join('\n\n');
     
-    // Step 4: Generate response using Flask backend
+    // Step 4: Generate response using Flask BioGPT (GPU-accelerated)
     let generatedAnswer = null;
     if (context.length > 0) {
       generatedAnswer = await this.generateResponse(question, context);

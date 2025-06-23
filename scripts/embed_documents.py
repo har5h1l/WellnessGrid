@@ -366,6 +366,9 @@ class DocumentEmbedder:
         from supabase import create_client
         
         self.embedding_model = SentenceTransformer('NeuML/pubmedbert-base-embeddings')
+        print("🧠 Embedding model: PubMedBERT (medical-specific)")
+        print("   - Optimized for biomedical text")
+        print("   - 768-dimensional embeddings")
         
         # Initialize Supabase client
         supabase_url = os.getenv('NEXT_PUBLIC_SUPABASE_URL')
