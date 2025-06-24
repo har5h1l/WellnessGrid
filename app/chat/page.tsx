@@ -132,7 +132,7 @@ export default function ChatAssistant() {
       
       // Return the full AI response data (updated to match new API format)
       return {
-        answer: data.response || "I apologize, but I'm having trouble generating a response right now. Please try again.",
+        answer: data.answer || data.response || "I apologize, but I'm having trouble generating a response right now. Please try again.",
         sources: data.sources,
         mockMode: data.mockMode
       };

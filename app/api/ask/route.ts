@@ -6,7 +6,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Flask backend configuration (for embeddings and text generation)
-const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5000';
+const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5001';
 
 interface UserContext {
   healthConditions: string[];
@@ -35,11 +35,11 @@ interface RAGResponse {
 
 class SupabaseRAGSystem {
   private supabase;
-
+  
   constructor() {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
-
+  
   async searchSimilarDocuments(queryEmbedding: number[], topK: number = 5, threshold: number = 0.5) {
     try {
       const { data, error } = await this.supabase.rpc('search_embeddings', {
@@ -47,19 +47,19 @@ class SupabaseRAGSystem {
         match_threshold: threshold,
         match_count: topK
       });
-
+      
       if (error) {
         console.error('Supabase search error:', error);
         return [];
       }
-
+      
       return data || [];
     } catch (error) {
       console.error('Error searching similar documents:', error);
       return [];
     }
   }
-
+  
   async generateResponse(query: string, context: string): Promise<string | null> {
     try {
       // Call Flask /generate endpoint for GPU-accelerated text generation
@@ -94,6 +94,8 @@ class SupabaseRAGSystem {
   async getQueryEmbedding(query: string): Promise<number[] | null> {
     try {
       console.log('🔍 Generating PubMedBERT embedding via Flask...');
+      console.log(`🌐 Flask URL: ${FLASK_API_BASE_URL}/embed`);
+      
       // Call Flask /embed endpoint for PubMedBERT embeddings (medical accuracy)
       const response = await fetch(`${FLASK_API_BASE_URL}/embed`, {
         method: 'POST',
@@ -106,7 +108,9 @@ class SupabaseRAGSystem {
       });
       
       if (!response.ok) {
-        console.error(`Flask embed error: ${response.status}`);
+        console.error(`Flask embed error: ${response.status} - ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`Error details: ${errorText}`);
         return null;
       }
       
@@ -115,10 +119,11 @@ class SupabaseRAGSystem {
       return result.embedding || null;
     } catch (error) {
       console.error('Error generating PubMedBERT embedding:', error);
+      console.error('Full error details:', JSON.stringify(error, null, 2));
       return null;
     }
   }
-
+  
   async query(question: string): Promise<RAGResponse> {
     const startTime = Date.now();
     

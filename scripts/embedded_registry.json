@@ -4,7 +4,7 @@
       "source_id": "clinical_research_trials_7f217f66",
       "title": "ClinicalTrials.gov API - Clinical Studies Database",
       "content_hash": "459234b3570e4f45",
-      "embedding_date": "2025-06-23T14:57:56.196168",
+      "embedding_date": "2025-06-23T16:31:52.033777",
       "chunk_count": 7,
       "category": "clinical_research",
       "subcategory": "trials",
@@ -13,14 +13,14 @@
         "description": "Comprehensive database of clinical studies conducted around the world",
         "priority": "high",
         "url": "https://clinicaltrials.gov/api/v2/studies",
-        "document_id": "053d507c-147a-4f92-b38b-bef91320e71f"
+        "document_id": "eb0cd1e3-7db7-43ba-ba47-695192884181"
       }
     },
     "clinical_research_icu_data_2aadc8ee": {
       "source_id": "clinical_research_icu_data_2aadc8ee",
       "title": "MIMIC-III Clinical Database",
       "content_hash": "ba95e8fd1951141e",
-      "embedding_date": "2025-06-23T14:58:01.176199",
+      "embedding_date": "2025-06-23T16:31:56.871321",
       "chunk_count": 32,
       "category": "clinical_research",
       "subcategory": "icu_data",
@@ -29,14 +29,14 @@
         "description": "Deidentified health data from 40,000+ ICU patients at Beth Israel Deaconess Medical Center",
         "priority": "high",
         "url": "https://physionet.org/content/mimiciii/1.4/",
-        "document_id": "c9309138-b691-428e-aecf-131348b42718"
+        "document_id": "7e024752-0647-42fe-9cf4-65ee89c2c7f9"
       }
     },
     "clinical_research_icu_data_5948c698": {
       "source_id": "clinical_research_icu_data_5948c698",
       "title": "MIMIC-IV Clinical Database",
       "content_hash": "96d182c3fab5d7e6",
-      "embedding_date": "2025-06-23T14:58:07.267570",
+      "embedding_date": "2025-06-23T16:32:02.918761",
       "chunk_count": 49,
       "category": "clinical_research",
       "subcategory": "icu_data",
@@ -45,14 +45,14 @@
         "description": "Updated version with data from 65,000+ ICU patients and 200,000+ emergency department patients",
         "priority": "high",
         "url": "https://physionet.org/content/mimiciv/3.1/",
-        "document_id": "11ed38d8-2314-47ab-987e-28e0f72d8056"
+        "document_id": "048fce01-f22a-45cd-8622-2d604854c989"
       }
     },
     "medical_education_qa_dataset_9c5ce40c": {
       "source_id": "medical_education_qa_dataset_9c5ce40c",
       "title": "MedMCQA - Medical Multiple Choice Question Answering Dataset",
       "content_hash": "60b5fb2a030073e5",
-      "embedding_date": "2025-06-23T14:58:10.303948",
+      "embedding_date": "2025-06-23T16:32:06.112918",
       "chunk_count": 12,
       "category": "medical_education",
       "subcategory": "qa_dataset",
@@ -61,14 +61,14 @@
         "description": "Large-scale medical question answering dataset for medical education and assessment",
         "priority": "high",
         "url": "https://github.com/medmcqa/medmcqa",
-        "document_id": "8e29b8b2-2a35-4d92-a360-a1322d5c2b8a"
+        "document_id": "d1bbdb46-6c83-4cad-8772-91f71994c6bf"
       }
     },
     "global_health_statistics_4a2823a6": {
       "source_id": "global_health_statistics_4a2823a6",
       "title": "WHO Global Health Observatory - Health Indicators",
       "content_hash": "5fa05d7532a6f7c4",
-      "embedding_date": "2025-06-23T14:58:13.079016",
+      "embedding_date": "2025-06-23T16:32:09.090432",
       "chunk_count": 7,
       "category": "global_health",
       "subcategory": "statistics",
@@ -77,14 +77,14 @@
         "description": "Comprehensive global health statistics and indicators from WHO",
         "priority": "high",
         "url": "https://ghoapi.azureedge.net/api/Indicator",
-        "document_id": "0a550519-9af0-474c-88ef-b8cd356cc1ba"
+        "document_id": "cc13cf16-431f-4fdc-8e48-91df9ed4e30f"
       }
     },
     "global_health_mortality_121adea1": {
       "source_id": "global_health_mortality_121adea1",
       "title": "WHO Life Expectancy Data",
       "content_hash": "04a0d53c9d2fde26",
-      "embedding_date": "2025-06-23T14:58:17.951235",
+      "embedding_date": "2025-06-23T16:32:12.641320",
       "chunk_count": 7,
       "category": "global_health",
       "subcategory": "mortality",
@@ -93,14 +93,14 @@
         "description": "Global life expectancy statistics by country and demographic",
         "priority": "high",
         "url": "https://ghoapi.azureedge.net/api/WHOSIS_000001",
-        "document_id": "cc600dd1-d172-411c-972f-7ac654ed99ec"
+        "document_id": "02be940f-4456-4f98-802c-da2e83149b70"
       }
     },
     "global_health_comprehensive_20db63c9": {
       "source_id": "global_health_comprehensive_20db63c9",
       "title": "WHO Athena API - Global Health Data",
-      "content_hash": "68b1f54a7e698b51",
-      "embedding_date": "2025-06-23T14:58:31.713913",
+      "content_hash": "5f56b05f8d472063",
+      "embedding_date": "2025-06-23T16:32:25.703231",
       "chunk_count": 7,
       "category": "global_health",
       "subcategory": "comprehensive",
@@ -109,14 +109,14 @@
         "description": "WHO's comprehensive health data API with multiple endpoints",
         "priority": "high",
         "url": "https://apps.who.int/gho/athena/api/GHO",
-        "document_id": "ebb02a50-5e5e-4692-b6c2-bdd41a24738a"
+        "document_id": "af88a000-3a9f-407d-ae49-44375ac6ad69"
       }
     },
     "global_health_portal_01e97c5c": {
       "source_id": "global_health_portal_01e97c5c",
       "title": "WHO Data Collections Portal",
       "content_hash": "b9f30abcb2e58079",
-      "embedding_date": "2025-06-23T14:58:34.741956",
+      "embedding_date": "2025-06-23T16:32:28.099251",
       "chunk_count": 1,
       "category": "global_health",
       "subcategory": "portal",
@@ -125,14 +125,14 @@
         "description": "Central repository for WHO's health data collections and datasets",
         "priority": "high",
         "url": "https://www.who.int/data/collections",
-        "document_id": "246925a3-c75b-4c56-9174-cc9deb03ff89"
+        "document_id": "cac0811d-0ac0-4618-9b8f-e0d9e7e989ca"
       }
     },
     "research_literature_pubmed_b9157a78": {
       "source_id": "research_literature_pubmed_b9157a78",
       "title": "PubMed/MEDLINE Database API",
       "content_hash": "cb028ed54eeead8e",
-      "embedding_date": "2025-06-23T14:58:48.213910",
+      "embedding_date": "2025-06-23T16:32:41.722088",
       "chunk_count": 1,
       "category": "research_literature",
       "subcategory": "pubmed",
@@ -141,14 +141,14 @@
         "description": "Comprehensive biomedical literature database",
         "priority": "high",
         "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-        "document_id": "b03e76a9-5145-4394-9895-d1457aec564c"
+        "document_id": "7ca5e2c8-f782-42cf-aa99-d692880f4d06"
       }
     },
     "research_literature_full_text_0c54f4ac": {
       "source_id": "research_literature_full_text_0c54f4ac",
       "title": "PMC Open Access Subset",
-      "content_hash": "5679b4a9bc799225",
-      "embedding_date": "2025-06-23T14:58:51.401428",
+      "content_hash": "4d726fde865f1f54",
+      "embedding_date": "2025-06-23T16:32:44.867615",
       "chunk_count": 7,
       "category": "research_literature",
       "subcategory": "full_text",
@@ -157,14 +157,14 @@
         "description": "Full-text articles from PubMed Central open access collection",
         "priority": "high",
         "url": "https://pmc.ncbi.nlm.nih.gov/tools/openftlist/",
-        "document_id": "3d92149c-9db6-417f-b701-25478fc7d2e1"
+        "document_id": "8efaa251-d299-4e14-b398-237b324ce3e1"
       }
     },
     "patient_education_general_38b48432": {
       "source_id": "patient_education_general_38b48432",
       "title": "MedlinePlus Health Information",
       "content_hash": "1d02b05488351c13",
-      "embedding_date": "2025-06-23T14:58:54.382368",
+      "embedding_date": "2025-06-23T16:32:47.611000",
       "chunk_count": 6,
       "category": "patient_education",
       "subcategory": "general",
@@ -173,14 +173,14 @@
         "description": "Consumer health information from the National Library of Medicine",
         "priority": "high",
         "url": "https://medlineplus.gov/xml.html",
-        "document_id": "64b0d3c1-ca81-4bcf-824f-38a2db3ba000"
+        "document_id": "da164cd2-afa3-4c6c-8b78-a1e240f351e6"
       }
     },
     "drug_safety_adverse_events_555bc34d": {
       "source_id": "drug_safety_adverse_events_555bc34d",
       "title": "FDA Adverse Event Reporting System (FAERS)",
       "content_hash": "7fecb222a6e17dc2",
-      "embedding_date": "2025-06-23T14:58:59.847150",
+      "embedding_date": "2025-06-23T16:32:52.717193",
       "chunk_count": 3,
       "category": "drug_safety",
       "subcategory": "adverse_events",
@@ -189,14 +189,14 @@
         "description": "Drug adverse event reports and safety data",
         "priority": "medium",
         "url": "https://api.fda.gov/drug/event.json",
-        "document_id": "40f327dc-3987-431b-957f-f5e19e404e56"
+        "document_id": "03688496-b471-4d41-a8d7-43233c6e3eb7"
       }
     },
     "drug_information_labels_b60cceed": {
       "source_id": "drug_information_labels_b60cceed",
       "title": "FDA Drug Labels Database",
       "content_hash": "3447f102d2fd3b4b",
-      "embedding_date": "2025-06-23T14:59:03.442770",
+      "embedding_date": "2025-06-23T16:32:55.536503",
       "chunk_count": 3,
       "category": "drug_information",
       "subcategory": "labels",
@@ -205,14 +205,14 @@
         "description": "Prescription and over-the-counter drug labeling information",
         "priority": "medium",
         "url": "https://api.fda.gov/drug/label.json",
-        "document_id": "19c52b95-837c-4ad3-8ba9-65dd37ebbd55"
+        "document_id": "1d85fd86-2c02-4254-870f-6b295ea8bdbe"
       }
     },
     "device_safety_adverse_events_2249814d": {
       "source_id": "device_safety_adverse_events_2249814d",
       "title": "FDA Medical Device Adverse Events",
       "content_hash": "df995a5cb97762a0",
-      "embedding_date": "2025-06-23T14:59:09.090141",
+      "embedding_date": "2025-06-23T16:33:01.284767",
       "chunk_count": 7,
       "category": "device_safety",
       "subcategory": "adverse_events",
@@ -221,14 +221,14 @@
         "description": "Medical device adverse event reports",
         "priority": "medium",
         "url": "https://api.fda.gov/device/event.json",
-        "document_id": "4c55de6d-3bc0-4e99-a7ee-32bb81042715"
+        "document_id": "cf17beb9-e8eb-4f3a-a6e6-e169b2265fb8"
       }
     },
     "food_safety_enforcement_76fa5cd4": {
       "source_id": "food_safety_enforcement_76fa5cd4",
       "title": "FDA Food Enforcement Reports",
       "content_hash": "01dc2eb6565f46db",
-      "embedding_date": "2025-06-23T14:59:12.267711",
+      "embedding_date": "2025-06-23T16:33:05.357657",
       "chunk_count": 7,
       "category": "food_safety",
       "subcategory": "enforcement",
@@ -237,14 +237,14 @@
         "description": "Food safety recalls and enforcement actions",
         "priority": "medium",
         "url": "https://api.fda.gov/food/enforcement.json",
-        "document_id": "112dd8c4-ab07-4062-bf54-47d3b519890d"
+        "document_id": "dd1294a4-42a1-43e5-97e1-582eb681de14"
       }
     },
     "research_datasets_collection_eeb94519": {
       "source_id": "research_datasets_collection_eeb94519",
       "title": "Awesome Medical Dataset Collection",
       "content_hash": "09f4fdf1b1cca494",
-      "embedding_date": "2025-06-23T15:01:52.108581",
+      "embedding_date": "2025-06-23T16:34:46.323610",
       "chunk_count": 235,
       "category": "research_datasets",
       "subcategory": "collection",
@@ -253,14 +253,14 @@
         "description": "Curated list of medical datasets for machine learning and research",
         "priority": "medium",
         "url": "https://github.com/openmedlab/Awesome-Medical-Dataset",
-        "document_id": "3fcce2c9-3da6-4691-9ed3-8ad421043edb"
+        "document_id": "b366dc41-ed45-4547-a9ac-416cc7b9209e"
       }
     },
     "clinical_research_demo_data_8c5e67be": {
       "source_id": "clinical_research_demo_data_8c5e67be",
       "title": "MIMIC-III Demo Dataset",
       "content_hash": "93c8e219401783aa",
-      "embedding_date": "2025-06-23T15:01:57.355333",
+      "embedding_date": "2025-06-23T16:34:53.547868",
       "chunk_count": 15,
       "category": "clinical_research",
       "subcategory": "demo_data",
@@ -269,14 +269,14 @@
         "description": "Publicly available demo version of MIMIC-III for testing and development",
         "priority": "medium",
         "url": "https://physionet.org/content/mimiciii-demo/1.4/",
-        "document_id": "7411b4c3-a142-4832-bdb2-f5017e73ec02"
+        "document_id": "d83665b4-816a-4a86-97d2-62590e59a801"
       }
     },
     "medical_imaging_cancer_3d5ac831": {
       "source_id": "medical_imaging_cancer_3d5ac831",
       "title": "The Cancer Imaging Archive (TCIA)",
       "content_hash": "9acbd6867057e9cf",
-      "embedding_date": "2025-06-23T15:02:01.202910",
+      "embedding_date": "2025-06-23T16:34:56.884731",
       "chunk_count": 1,
       "category": "medical_imaging",
       "subcategory": "cancer",
@@ -285,14 +285,14 @@
         "description": "Large archive of medical images of cancer for research",
         "priority": "medium",
         "url": "https://www.cancerimagingarchive.net/",
-        "document_id": "794e536c-95ac-4687-bb77-5242c1e72365"
+        "document_id": "97acee20-fa90-4308-a732-d8d92a59606f"
       }
     },
     "diabetes_patient_info_a3b52d0f": {
       "source_id": "diabetes_patient_info_a3b52d0f",
       "title": "MedlinePlus - Diabetes Information",
       "content_hash": "4f0e0c8154073dd4",
-      "embedding_date": "2025-06-23T15:02:05.724685",
+      "embedding_date": "2025-06-23T16:35:00.290534",
       "chunk_count": 16,
       "category": "diabetes",
       "subcategory": "patient_info",
@@ -301,14 +301,14 @@
         "description": "Comprehensive diabetes information for patients and families",
         "priority": "medium",
         "url": "https://medlineplus.gov/diabetes.html",
-        "document_id": "5145e1aa-f3ec-404d-ad40-caf9fa270e43"
+        "document_id": "f696bf08-f96a-45c4-8c34-446ce8558b39"
       }
     },
     "oncology_patient_info_2e88822e": {
       "source_id": "oncology_patient_info_2e88822e",
       "title": "MedlinePlus - Cancer Information",
       "content_hash": "581dc2515142e094",
-      "embedding_date": "2025-06-23T15:02:15.585273",
+      "embedding_date": "2025-06-23T16:35:06.691535",
       "chunk_count": 17,
       "category": "oncology",
       "subcategory": "patient_info",
@@ -317,14 +317,14 @@
         "description": "Cancer types, treatment options, and support resources",
         "priority": "medium",
         "url": "https://medlineplus.gov/cancer.html",
-        "document_id": "382b500d-19bb-45d9-b703-0b0db7c1ebe3"
+        "document_id": "1865004f-7ae9-4dad-82ec-450f55c06ff4"
       }
     },
     "mental_health_patient_info_4b1d6557": {
       "source_id": "mental_health_patient_info_4b1d6557",
       "title": "MedlinePlus - Mental Health",
       "content_hash": "1a6ad566c14c2582",
-      "embedding_date": "2025-06-23T15:02:19.269130",
+      "embedding_date": "2025-06-23T16:35:09.675008",
       "chunk_count": 8,
       "category": "mental_health",
       "subcategory": "patient_info",
@@ -333,14 +333,14 @@
         "description": "Mental health conditions, treatments, and support resources",
         "priority": "medium",
         "url": "https://medlineplus.gov/mentalhealth.html",
-        "document_id": "faa90eb3-4cf9-4cff-a1d5-6207c97803a5"
+        "document_id": "4dfd24fd-c4c8-441c-8028-21484f21f934"
       }
     },
     "infectious_disease_patient_info_d797e547": {
       "source_id": "infectious_disease_patient_info_d797e547",
       "title": "MedlinePlus - Infectious Diseases",
       "content_hash": "58f89a13d63e7140",
-      "embedding_date": "2025-06-23T15:02:22.517992",
+      "embedding_date": "2025-06-23T16:35:12.345414",
       "chunk_count": 8,
       "category": "infectious_disease",
       "subcategory": "patient_info",
@@ -349,14 +349,14 @@
         "description": "Information on infectious diseases, prevention, and treatment",
         "priority": "medium",
         "url": "https://medlineplus.gov/infectiousdiseases.html",
-        "document_id": "98e5329a-0265-4e96-9e34-81c2d3f1dc10"
+        "document_id": "ac6c600e-2b7b-4449-aa73-6037ab69192c"
       }
     },
     "pharmacology_drug_info_2d696a61": {
       "source_id": "pharmacology_drug_info_2d696a61",
       "title": "MedlinePlus - Drug Information",
       "content_hash": "b2b6a21a1a999951",
-      "embedding_date": "2025-06-23T15:02:24.899291",
+      "embedding_date": "2025-06-23T16:35:14.666922",
       "chunk_count": 2,
       "category": "pharmacology",
       "subcategory": "drug_info",
@@ -365,14 +365,14 @@
         "description": "Comprehensive drug information including side effects and interactions",
         "priority": "medium",
         "url": "https://medlineplus.gov/druginformation.html",
-        "document_id": "5ba48499-86be-48f7-8519-2868835ca4b3"
+        "document_id": "3cd062bd-728c-4707-bc0c-59f185f94b5d"
       }
     },
     "pharmacology_nomenclature_d1792ce1": {
       "source_id": "pharmacology_nomenclature_d1792ce1",
       "title": "RxNorm API - Drug Nomenclature",
       "content_hash": "9022fcbc877624c4",
-      "embedding_date": "2025-06-23T15:02:34.590751",
+      "embedding_date": "2025-06-23T16:35:18.435132",
       "chunk_count": 4,
       "category": "pharmacology",
       "subcategory": "nomenclature",
@@ -381,14 +381,14 @@
         "description": "Standardized drug nomenclature and terminology",
         "priority": "medium",
         "url": "https://rxnav.nlm.nih.gov/REST/",
-        "document_id": "b7dd06c0-258a-4c30-b93d-d3dc5d369b6c"
+        "document_id": "71b2c1db-4828-4a1a-beb7-9e699a050db5"
       }
     },
     "terminology_standards_cb4d3ff0": {
       "source_id": "terminology_standards_cb4d3ff0",
       "title": "UMLS Knowledge Sources",
       "content_hash": "dbe566924819e9ae",
-      "embedding_date": "2025-06-23T15:02:39.518824",
+      "embedding_date": "2025-06-23T16:35:24.599514",
       "chunk_count": 6,
       "category": "terminology",
       "subcategory": "standards",
@@ -397,14 +397,14 @@
         "description": "Medical vocabularies and classification systems",
         "priority": "low",
         "url": "https://www.nlm.nih.gov/research/umls/",
-        "document_id": "e0470485-5324-4756-a498-5e51595cce5b"
+        "document_id": "b12a0577-e206-4d39-bfdf-ba53dc25f2c9"
       }
     },
     "wellness_lifestyle_734e3652": {
       "source_id": "wellness_lifestyle_734e3652",
       "title": "MedlinePlus - Healthy Living",
       "content_hash": "1609fd2af9fccfb2",
-      "embedding_date": "2025-06-23T15:02:42.023059",
+      "embedding_date": "2025-06-23T16:35:27.162602",
       "chunk_count": 5,
       "category": "wellness",
       "subcategory": "lifestyle",
@@ -413,14 +413,14 @@
         "description": "Comprehensive guide to healthy lifestyle choices",
         "priority": "medium",
         "url": "https://medlineplus.gov/healthyliving.html",
-        "document_id": "a209c576-e6b6-4a08-8467-2c24372f5115"
+        "document_id": "0a9b6ba1-fbec-4d7c-ac27-dfc5b38f03c5"
       }
     },
     "wellness_fitness_5beeebd0": {
       "source_id": "wellness_fitness_5beeebd0",
       "title": "MedlinePlus - Exercise and Physical Fitness",
       "content_hash": "34e934f0ff2f820d",
-      "embedding_date": "2025-06-23T15:02:44.676266",
+      "embedding_date": "2025-06-23T16:35:30.015616",
       "chunk_count": 11,
       "category": "wellness",
       "subcategory": "fitness",
@@ -429,14 +429,14 @@
         "description": "Exercise guidelines and physical fitness information",
         "priority": "medium",
         "url": "https://medlineplus.gov/exerciseandphysicalfitness.html",
-        "document_id": "9b9366de-3a9b-4146-aeee-9490afa62db1"
+        "document_id": "5b867a10-88c3-414e-8b21-8b08337903fd"
       }
     },
     "wellness_nutrition_e4895faf": {
       "source_id": "wellness_nutrition_e4895faf",
       "title": "MedlinePlus - Nutrition",
       "content_hash": "188c3a9867a63d9a",
-      "embedding_date": "2025-06-23T15:02:47.248601",
+      "embedding_date": "2025-06-23T16:35:32.649785",
       "chunk_count": 8,
       "category": "wellness",
       "subcategory": "nutrition",
@@ -445,14 +445,14 @@
         "description": "Nutritional guidelines and dietary information",
         "priority": "medium",
         "url": "https://medlineplus.gov/nutrition.html",
-        "document_id": "6ee62647-f6cb-40ce-b540-fe8e3dca1d6d"
+        "document_id": "cd29eff1-4ae5-4851-9e33-92d4fc9bd6ce"
       }
     },
     "emergency_medicine_first_aid_acb1b622": {
       "source_id": "emergency_medicine_first_aid_acb1b622",
       "title": "MedlinePlus - First Aid",
       "content_hash": "206bceaae808d4b5",
-      "embedding_date": "2025-06-23T15:02:49.680565",
+      "embedding_date": "2025-06-23T16:35:35.226194",
       "chunk_count": 5,
       "category": "emergency_medicine",
       "subcategory": "first_aid",
@@ -461,14 +461,14 @@
         "description": "Emergency first aid procedures and guidelines",
         "priority": "high",
         "url": "https://medlineplus.gov/firstaid.html",
-        "document_id": "048fbb89-326c-44fc-9980-66120a0c5170"
+        "document_id": "84c06f44-f57b-43a4-8246-75ebbea8328a"
       }
     },
     "emergency_medicine_toxicology_84d30d6a": {
       "source_id": "emergency_medicine_toxicology_84d30d6a",
       "title": "MedlinePlus - Poisoning",
       "content_hash": "af151ae1ba88280b",
-      "embedding_date": "2025-06-23T15:02:52.437802",
+      "embedding_date": "2025-06-23T16:35:37.744934",
       "chunk_count": 5,
       "category": "emergency_medicine",
       "subcategory": "toxicology",
@@ -477,34 +477,21 @@
         "description": "Poisoning prevention, recognition, and treatment",
         "priority": "high",
         "url": "https://medlineplus.gov/poisoning.html",
-        "document_id": "a39473c9-8bd7-46ec-8da3-0121c7ec4cef"
+        "document_id": "03614c1a-645f-4d26-9700-e866ee2fa805"
       }
     }
   },
   "embedding_sessions": [
     {
-      "session_id": "20250623_145248",
-      "start_time": "2025-06-23T14:52:48.300029",
-      "sources_processed": 30,
-      "chunks_created": 0,
-      "status": "completed",
-      "total_sources": 37,
-      "clear_db": true,
-      "force_reembed": false,
-      "end_time": "2025-06-23T14:54:53.872746",
-      "documents_embedded": 0,
-      "sources_skipped": 7
-    },
-    {
-      "session_id": "20250623_145754",
-      "start_time": "2025-06-23T14:57:54.593432",
+      "session_id": "20250623_163150",
+      "start_time": "2025-06-23T16:31:50.701748",
       "sources_processed": 30,
       "chunks_created": 0,
       "status": "completed",
       "total_sources": 37,
       "clear_db": false,
       "force_reembed": false,
-      "end_time": "2025-06-23T15:02:54.441209",
+      "end_time": "2025-06-23T16:35:39.749498",
       "documents_embedded": 30,
       "sources_skipped": 7
     }
@@ -512,7 +499,7 @@
   "statistics": {
     "total_documents_embedded": 30,
     "total_chunks_created": 502,
-    "last_embedding_session": "2025-06-23T15:02:52.437862",
+    "last_embedding_session": "2025-06-23T16:35:37.745022",
     "embedding_model_used": "NeuML/pubmedbert-base-embeddings",
     "database_table": "medical_documents",
     "embeddings_table": "document_embeddings"
@@ -520,7 +507,7 @@
   "metadata": {
     "version": "1.0",
     "created_date": "2024-01-01",
-    "last_updated": "2025-06-23T15:02:54.441237",
+    "last_updated": "2025-06-23T16:35:39.749522",
     "description": "Registry of all embedded documents and their processing status"
   }
 }
