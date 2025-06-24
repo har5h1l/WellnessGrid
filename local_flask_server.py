@@ -128,74 +128,102 @@ def generate_text():
         model, tokenizer = load_biogpt_model()
         
         if not model or not tokenizer:
-            # Enhanced fallback response that creates a proper medical answer from context
+            # Enhanced fallback response using structured medical format
             if context and len(context.strip()) > 0:
-                # Extract key information from context
-                context_parts = context.split('\n')
-                relevant_info = []
-                for part in context_parts:
-                    if part.strip() and not part.startswith('Source:'):
-                        relevant_info.append(part.strip())
+                # Parse and clean the context to extract medical information
+                context_lines = context.split('\n')
+                relevant_passages = []
                 
-                if relevant_info:
-                    # Create a comprehensive response using the context
-                    combined_info = ' '.join(relevant_info)
+                for line in context_lines:
+                    line = line.strip()
+                    if line and not line.startswith('Source:') and len(line) > 20:
+                        relevant_passages.append(line)
+                
+                if relevant_passages:
+                    # Take top 3 most relevant passages
+                    top_passages = relevant_passages[:3]
+                    formatted_context = '\n'.join([f"- {passage}" for passage in top_passages])
                     
-                    # Create a structured answer based on the query type
-                    if 'what is' in query.lower():
-                        fallback_answer = f"Based on the medical information available, here's what you need to know about {query.replace('what is', '').replace('What is', '').strip()}:\n\n{combined_info[:800]}...\n\nFor personalized medical advice and diagnosis, please consult with a healthcare professional."
-                    elif 'symptoms' in query.lower():
-                        fallback_answer = f"According to medical sources, here are the key symptoms to be aware of:\n\n{combined_info[:800]}...\n\nIf you're experiencing any of these symptoms, it's important to consult with a healthcare professional for proper evaluation and diagnosis."
-                    elif 'how do i know' in query.lower() or 'diagnosis' in query.lower():
-                        fallback_answer = f"Here's how medical professionals typically diagnose this condition:\n\n{combined_info[:800]}...\n\nFor accurate diagnosis and testing, you should consult with a qualified healthcare provider who can evaluate your specific situation."
-                    else:
-                        fallback_answer = f"Based on reliable medical sources:\n\n{combined_info[:800]}...\n\nFor specific medical advice tailored to your situation, please consult with a healthcare professional."
+                    # Create structured medical response
+                    fallback_answer = f"""Based on the medical information provided in the context:
+
+{formatted_context}
+
+This information suggests that {query.lower()} involves the medical concepts described above. However, for accurate diagnosis, personalized treatment recommendations, or specific medical advice, please consult with a qualified healthcare professional who can evaluate your individual situation.
+
+**Disclaimer**: This response is based solely on the provided medical context and should not replace professional medical consultation."""
                 else:
-                    fallback_answer = f"I found relevant medical information about {query}, but need a healthcare professional's interpretation. Please consult with a medical expert for specific advice."
+                    fallback_answer = "I could not find sufficient relevant medical information in the provided context to answer your question accurately. Please consult with a healthcare professional for reliable medical advice."
             else:
-                fallback_answer = f"I found limited information about {query}. Please consult with a healthcare professional for comprehensive medical advice."
+                fallback_answer = "No medical context was provided to answer this question. Please consult with a healthcare professional for accurate medical information."
             return jsonify({"answer": fallback_answer})
         
-        # Prepare input text
-        input_text = f"Question: {query}\nContext: {context}\nAnswer:"
+        # Prepare input text with advanced medical prompt structure
+        input_text = f"""You are a helpful and accurate medical assistant. Use the following context to answer the question.
+
+Context:
+{context}
+
+Question: {query}
+
+Answer (based only on the context, no assumptions):"""
         
-        # Generate response
-        inputs = tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
+        # Generate response with optimized settings
+        try:
+            import time
+            
+            inputs = tokenizer.encode(input_text, return_tensors="pt", max_length=256, truncation=True)
+            
+            start_time = time.time()
+            with torch.no_grad():
+                outputs = model.generate(
+                    inputs,
+                    max_length=inputs.shape[1] + min(max_tokens, 60),  # Very conservative token limit
+                    temperature=temperature,
+                    pad_token_id=tokenizer.eos_token_id,
+                    do_sample=False,  # Use greedy decoding for speed
+                    num_beams=1,  # Use greedy decoding for speed
+                    early_stopping=True
+                )
+            
+            generation_time = time.time() - start_time
+            print(f"✅ BioGPT generation completed in {generation_time:.2f}s")
+            
+            # Decode response
+            response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            answer = response[len(input_text):].strip()
+            
+        except Exception as e:
+            print(f"⚠️ BioGPT generation failed: {e}")
+            # Use enhanced fallback instead
+            answer = None
         
-        with torch.no_grad():
-            outputs = model.generate(
-                inputs,
-                max_length=inputs.shape[1] + max_tokens,
-                temperature=temperature,
-                pad_token_id=tokenizer.eos_token_id,
-                do_sample=True
-            )
-        
-        # Decode response
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        answer = response[len(input_text):].strip()
-        
-        # Check if the generated answer is too short or low quality
-        if len(answer) < 20 or answer.lower().startswith(('what is', 'how to', 'the', 'it is')):
+        # Check if the generated answer is too short, low quality, or None (timeout/error)
+        if not answer or len(answer) < 20 or answer.lower().startswith(('what is', 'how to', 'the', 'it is')):
             print(f"⚠️ BioGPT response too short ({len(answer)} chars), using enhanced fallback")
-            # Use the enhanced fallback logic instead
+            # Use the enhanced fallback logic with structured format
             if context and len(context.strip()) > 0:
-                context_parts = context.split('\n')
-                relevant_info = []
-                for part in context_parts:
-                    if part.strip() and not part.startswith('Source:'):
-                        relevant_info.append(part.strip())
+                context_lines = context.split('\n')
+                relevant_passages = []
                 
-                if relevant_info:
-                    combined_info = ' '.join(relevant_info)
-                    if 'what is' in query.lower():
-                        enhanced_answer = f"Based on the medical information available, here's what you need to know about {query.replace('what is', '').replace('What is', '').strip()}:\n\n{combined_info[:800]}...\n\nFor personalized medical advice and diagnosis, please consult with a healthcare professional."
-                    elif 'symptoms' in query.lower():
-                        enhanced_answer = f"According to medical sources, here are the key symptoms to be aware of:\n\n{combined_info[:800]}...\n\nIf you're experiencing any of these symptoms, it's important to consult with a healthcare professional for proper evaluation and diagnosis."
-                    elif 'how do i know' in query.lower() or 'diagnosis' in query.lower():
-                        enhanced_answer = f"Here's how medical professionals typically diagnose this condition:\n\n{combined_info[:800]}...\n\nFor accurate diagnosis and testing, you should consult with a qualified healthcare provider who can evaluate your specific situation."
-                    else:
-                        enhanced_answer = f"Based on reliable medical sources:\n\n{combined_info[:800]}...\n\nFor specific medical advice tailored to your situation, please consult with a healthcare professional."
+                for line in context_lines:
+                    line = line.strip()
+                    if line and not line.startswith('Source:') and len(line) > 20:
+                        relevant_passages.append(line)
+                
+                if relevant_passages:
+                    # Take top 3 most relevant passages
+                    top_passages = relevant_passages[:3]
+                    formatted_context = '\n'.join([f"- {passage}" for passage in top_passages])
+                    
+                    # Create structured medical response
+                    enhanced_answer = f"""Based on the medical information provided in the context:
+
+{formatted_context}
+
+This information suggests that {query.lower()} involves the medical concepts described above. However, for accurate diagnosis, personalized treatment recommendations, or specific medical advice, please consult with a qualified healthcare professional who can evaluate your individual situation.
+
+**Disclaimer**: This response is based solely on the provided medical context and should not replace professional medical consultation."""
                     return jsonify({"answer": enhanced_answer})
         
         print(f"✅ Generated response ({len(answer)} chars)")

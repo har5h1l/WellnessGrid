@@ -75,7 +75,7 @@ class SupabaseRAGSystem {
           max_tokens: 200,
           temperature: 0.7
         }),
-        signal: AbortSignal.timeout(30000) // 30 second timeout
+        signal: AbortSignal.timeout(60000) // 60 second timeout
       });
       
       if (!response.ok) {
