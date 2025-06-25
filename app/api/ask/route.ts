@@ -236,8 +236,69 @@ class EnhancedSupabaseRAGSystem {
     
     // Step 4: Search for similar documents in Supabase
     const similarDocs = await this.searchSimilarDocuments(queryEmbedding);
+    console.log(`📄 Found ${similarDocs.length} similar documents`);
     
-    // Step 5: Prepare context from retrieved documents
+    // Calculate average similarity for RAG failure detection
+    const similarities = similarDocs.map(doc => doc.similarity);
+    const avgSimilarity = similarities.length > 0 ? similarities.reduce((a, b) => a + b, 0) / similarities.length : 0;
+    const SIMILARITY_THRESHOLD = 0.6; // Adjust this threshold as needed
+    
+    console.log(`🎯 Average similarity: ${avgSimilarity.toFixed(3)}, Threshold: ${SIMILARITY_THRESHOLD}`);
+    
+    // Step 5: Check for RAG failure and use diagnostic fallback if needed
+    if (similarDocs.length === 0 || avgSimilarity < SIMILARITY_THRESHOLD) {
+      console.log('🚨 RAG failure detected: insufficient or low-quality retrieval results');
+      fallbacksUsed.push('rag_failure_fallback_used');
+      
+      // Use LLM diagnostic fallback
+      const fallbackResponse = await llmService.handleRAGFailure(question, chatHistory.messages);
+      if (fallbackResponse.success) {
+        const finalAnswer = fallbackResponse.content;
+        
+        // Save conversation to database
+        console.log('💾 Saving RAG fallback conversation to database...');
+        await chatService.insertMessagePair(
+          chatHistory.sessionId,
+          question,
+          finalAnswer,
+          {
+            queryEnhanced,
+            responseImproved: false,
+            documentsUsed: 0,
+            flaskBackendUsed: false,
+            ragFailureFallback: true
+          }
+        );
+        
+        const processingTime = ((Date.now() - startTime) / 1000).toFixed(2) + 's';
+        console.log('⏱️ Total processing time (RAG fallback):', processingTime);
+        
+        return {
+          query: question,
+          enhancedQuery: queryEnhanced ? finalQuery : undefined,
+          answer: finalAnswer,
+          sources: [],
+          sessionId: chatHistory.sessionId,
+          metadata: {
+            documentsUsed: 0,
+            totalFound: similarDocs.length,
+            contextLength: 0,
+            flaskBackendUsed: false,
+            processingTime: new Date().toISOString(),
+            chatHistoryUsed: hasHistory,
+            messagesInHistory: chatHistory.messages.length,
+            llmEnhancement: {
+              queryEnhanced,
+              queryEnhancementService,
+              responseImproved: false,
+              fallbacksUsed
+            }
+          }
+        };
+      }
+    }
+    
+    // Step 6: Prepare context from retrieved documents
     const contextParts: string[] = [];
     let totalChars = 0;
     const maxContextLength = 2000;
@@ -254,7 +315,7 @@ class EnhancedSupabaseRAGSystem {
     
     const context = contextParts.join('\n\n');
     
-    // Step 6: Generate response using Flask BioGPT (GPU-accelerated) with chat history
+    // Step 7: Generate response using Flask BioGPT (GPU-accelerated) with chat history
     let generatedAnswer = null;
     let flaskBackendUsed = false;
     if (context.length > 0) {
@@ -269,13 +330,13 @@ class EnhancedSupabaseRAGSystem {
       }
     }
     
-    // Step 7: Prepare initial response
+    // Step 8: Prepare initial response
     const rawAnswer = generatedAnswer || 
       (similarDocs.length > 0 
         ? "Based on the available medical information, I found relevant context but couldn't generate a response. This may be due to a timeout from the medical generation model. Please try again, and if the issue persists, a simpler query might work better."
         : "I couldn't find relevant information for your query. Please consult with a healthcare professional for medical advice.");
     
-    // Step 8: Improve response communication using Gemini/OpenRouter with chat history
+    // Step 9: Improve response communication using Gemini/OpenRouter with chat history
     let finalAnswer = rawAnswer;
     let responseImproved = false;
     let responseImprovementService: string | undefined;
@@ -295,7 +356,7 @@ class EnhancedSupabaseRAGSystem {
       }
     }
     
-    // Step 9: Save conversation to database
+    // Step 10: Save conversation to database
     console.log('💾 Saving conversation to database...');
     await chatService.insertMessagePair(
       chatHistory.sessionId,

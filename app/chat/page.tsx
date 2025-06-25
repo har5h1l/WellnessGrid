@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { useApp, useUser, useConditions } from "@/lib/store/enhanced-context"
 import { AppSelectors } from "@/lib/store/selectors"
 import { MoodTracker } from "@/components/mood-tracker"
@@ -326,57 +327,75 @@ export default function ChatAssistant() {
             </div>
           ) : (
             aiMessages.map((message) => (
-              <div key={message.id} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
-                {message.type === "ai" && (
-                  <div className="wellness-avatar mr-2">
-                    <Image src="/images/ai-assistant.png" alt="AI Coach" width={40} height={40} />
-                  </div>
-                )}
-                <div className="max-w-xs space-y-1">
-                  <div className="text-xs text-gray-500">{message.type === "ai" ? "AI Coach" : user.name}</div>
-                  <div className={message.type === "ai" ? "wellness-message-ai" : "wellness-message-user"}>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
-                    {message.type === "ai" && message.mockMode && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
-                        <Sparkles className="w-3 h-3" />
-                        <span>Demo mode - using sample health data</span>
+              <div key={message.id} className="mb-6">
+                {message.type === "user" ? (
+                  // User message - right aligned bubble
+                  <div className="flex justify-end">
+                    <div className="flex items-start space-x-3 max-w-full">
+                      <div className="wellness-message-user">
+                        {message.content}
                       </div>
-                    )}
-                    {message.type === "ai" && message.sources && message.sources.length > 0 && (
-                      <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-1 mb-1">
-                          <BookOpen className="w-3 h-3 text-gray-500" />
-                          <span className="text-xs font-medium text-gray-700">Information sources:</span>
+                      <div className="wellness-avatar">
+                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-red-600">{user.name.charAt(0).toUpperCase()}</span>
                         </div>
-                        <div className="space-y-1">
-                          {message.sources.map((source, index) => (
-                            <div key={index} className="text-xs text-gray-600 flex justify-between items-center">
-                              <span>{source.title}</span>
-                              <span className="text-gray-400">({Math.round(parseFloat(source.similarity) * 100)}% match)</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // AI message - full width
+                  <div className="w-full">
+                    <div className="flex items-start space-x-3 mb-3">
+                      <div className="wellness-avatar">
+                        <Image src="/images/ai-assistant.png" alt="AI Coach" width={32} height={32} />
+                      </div>
+                      <div className="text-sm font-medium text-gray-700">AI Coach</div>
+                    </div>
+                    <div className="ml-11">
+                      <div className="wellness-message-ai">
+                        <MarkdownRenderer 
+                          content={message.content} 
+                          className="wellness-message-ai-content"
+                        />
+                        
+                        {message.mockMode && (
+                          <div className="flex items-center gap-1 mt-4 text-xs text-blue-600">
+                            <Sparkles className="w-3 h-3" />
+                            <span>Demo mode - using sample health data</span>
+                          </div>
+                        )}
+                        
+                        {message.sources && message.sources.length > 0 && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <div className="flex items-center gap-1 mb-2">
+                              <BookOpen className="w-3 h-3 text-gray-500" />
+                              <span className="text-xs font-medium text-gray-700">Information sources:</span>
                             </div>
+                            <div className="space-y-1">
+                              {message.sources.map((source, index) => (
+                                <div key={index} className="text-xs text-gray-600 flex justify-between items-center">
+                                  <span className="font-medium">{source.title}</span>
+                                  <span className="text-gray-400">({Math.round(parseFloat(source.similarity) * 100)}% match)</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {message.suggestions && message.suggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {message.suggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleQuickMessage(suggestion)}
+                              className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                            >
+                              {suggestion}
+                            </button>
                           ))}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  {message.suggestions && message.suggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {message.suggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleQuickMessage(suggestion)}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {message.type === "user" && (
-                  <div className="wellness-avatar ml-2">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-red-600">{user.name.charAt(0).toUpperCase()}</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -385,21 +404,26 @@ export default function ChatAssistant() {
           )}
 
           {isTyping && (
-            <div className="flex justify-start">
-              <div className="wellness-avatar mr-2">
-                <Image src="/images/ai-assistant.png" alt="AI Coach" width={40} height={40} />
-              </div>
-              <div className="wellness-message-ai">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
+            <div className="mb-6">
+              <div className="w-full">
+                <div className="flex items-start space-x-3 mb-3">
+                  <div className="wellness-avatar">
+                    <Image src="/images/ai-assistant.png" alt="AI Coach" width={32} height={32} />
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">AI Coach</div>
+                </div>
+                <div className="ml-11">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
