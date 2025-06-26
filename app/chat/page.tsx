@@ -10,7 +10,9 @@ import { MoodTracker } from "@/components/mood-tracker"
 import { SymptomTracker } from "@/components/symptom-tracker"
 import { MedicationLogger } from "@/components/medication-logger"
 import { AppLogo } from "@/components/app-logo"
-import { ArrowLeft, Send, Activity, Heart, Pill, TrendingUp, Calendar, AlertCircle, BookOpen, Sparkles } from "lucide-react"
+import { ChatSidebar, ChatSidebarToggle } from "@/components/chat-sidebar"
+import { ChatManager, ChatSession } from "@/lib/chat-manager"
+import { ArrowLeft, Send, Activity, Heart, Pill, TrendingUp, Calendar, AlertCircle, BookOpen, Sparkles, Plus, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -37,6 +39,8 @@ export default function ChatAssistant() {
   const [showMoodTracker, setShowMoodTracker] = useState(false)
   const [showSymptomTracker, setShowSymptomTracker] = useState(false)
   const [showMedicationLogger, setShowMedicationLogger] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeSession, setActiveSession] = useState<ChatSession | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -49,6 +53,22 @@ export default function ChatAssistant() {
     }
     scrollToBottom()
   }, [actions, isReady, state.aiMessages])
+  
+  // Initialize active session on mount
+  useEffect(() => {
+    const session = ChatManager.getActiveChat()
+    setActiveSession(session)
+    console.log('Loaded active chat session:', session)
+  }, [])
+  
+  // Clear messages when switching sessions (they'll be loaded from backend)
+  useEffect(() => {
+    if (activeSession) {
+      // Clear current messages when switching sessions
+      // Messages will be loaded from the backend based on sessionId
+      console.log('Switched to session:', activeSession.id, 'Backend sessionId:', activeSession.sessionId)
+    }
+  }, [activeSession])
 
   // Show loading if context is not ready
   if (!isReady) {
@@ -106,14 +126,33 @@ export default function ChatAssistant() {
     handleSendMessage(message)
   }
 
-  const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean}> => {
+  const handleSessionChange = (session: ChatSession) => {
+    if (session.id !== activeSession?.id) {
+      setActiveSession(session)
+      // Clear current messages - they'll be loaded based on the new session
+      actions.clearAIMessages()
+      setSidebarOpen(false) // Close sidebar on mobile after selection
+      console.log('Switched to chat session:', session.title)
+    }
+  }
+
+  const handleNewChat = () => {
+    const newSession = ChatManager.createNewChat()
+    setActiveSession(newSession)
+    // Clear current messages for new chat
+    actions.clearAIMessages()
+    setSidebarOpen(false) // Close sidebar on mobile after creation
+    console.log('Created new chat session:', newSession.title)
+  }
+
+  const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean, sessionId?: string}> => {
     try {
       // Create user context with health conditions
       const userContext = {
         healthConditions: conditions.map(c => c.name)
       };
 
-      // Call our LLM API
+      // Call our LLM API with session management
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: {
@@ -121,7 +160,8 @@ export default function ChatAssistant() {
         },
         body: JSON.stringify({ 
           query: userMessage,
-          userContext: userContext
+          userContext: userContext,
+          sessionId: activeSession?.sessionId // Use backend sessionId from active session
         }),
       });
 
@@ -135,7 +175,8 @@ export default function ChatAssistant() {
       return {
         answer: data.answer || data.response || "I apologize, but I'm having trouble generating a response right now. Please try again.",
         sources: data.sources,
-        mockMode: data.mockMode
+        mockMode: data.mockMode,
+        sessionId: data.sessionId // Return sessionId from API response
       };
       
     } catch (error) {
@@ -234,16 +275,42 @@ export default function ChatAssistant() {
     try {
       // Generate AI response using our LLM API
       const aiResponseData = await generateAIResponse(messageToSend)
-        const aiMessage = {
-          type: "ai" as const,
+      
+      // Update backend sessionId if it changed
+      if (aiResponseData.sessionId && activeSession && aiResponseData.sessionId !== activeSession.sessionId) {
+        ChatManager.updateChatSession(activeSession.id, { sessionId: aiResponseData.sessionId })
+        setActiveSession(prev => prev ? { ...prev, sessionId: aiResponseData.sessionId } : null)
+        console.log('Updated backend sessionId for chat:', aiResponseData.sessionId)
+      }
+      
+      // Update chat metadata
+      if (activeSession) {
+        // Update title if this is the first message
+        if (activeSession.messageCount === 0) {
+          ChatManager.updateChatTitle(activeSession.id, messageToSend)
+        }
+        
+        // Increment message count and update last message
+        ChatManager.incrementMessageCount(activeSession.id, aiResponseData.answer)
+        
+        // Update local state
+        const updatedData = ChatManager.getChatSessions()
+        const updatedSession = updatedData.sessions.find(s => s.id === activeSession.id)
+        if (updatedSession) {
+          setActiveSession(updatedSession)
+        }
+      }
+      
+      const aiMessage = {
+        type: "ai" as const,
         content: aiResponseData.answer,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          suggestions: ["Log symptoms", "Track mood", "View progress", "Set reminder"],
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        suggestions: ["Log symptoms", "Track mood", "View progress", "Set reminder"],
         sources: aiResponseData.sources,
         mockMode: aiResponseData.mockMode,
-        }
+      }
 
-        actions.addAIMessage(aiMessage)
+      actions.addAIMessage(aiMessage)
     } catch (error) {
       console.error('Error generating AI response:', error)
       
@@ -292,20 +359,49 @@ export default function ChatAssistant() {
 
   return (
     <div className="min-h-screen wellness-gradient pb-20">
+      {/* Chat Sidebar */}
+      <ChatSidebar 
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        activeSession={activeSession}
+        onSessionChange={handleSessionChange}
+        onNewChat={handleNewChat}
+      />
+      
       {/* Header */}
-      <header className="wellness-header">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="text-gray-600">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-        <div className="flex-1 text-center">
-          <h1 className="text-xl font-bold text-gray-900">AI Health Coach</h1>
+      <header className="wellness-header relative z-30">
+        <div className="flex items-center gap-2">
+          <ChatSidebarToggle 
+            isOpen={sidebarOpen}
+            onToggle={() => setSidebarOpen(!sidebarOpen)}
+          />
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon" className="text-gray-600">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
         </div>
-        <div className="w-10"></div> {/* Spacer for balance */}
+        
+        <div className="flex-1 text-center">
+          <h1 className="text-lg font-bold text-gray-900 truncate px-2">
+            {activeSession?.title || 'AI Health Coach'}
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleNewChat}
+            className="text-gray-600 hover:bg-gray-100"
+            title="New chat"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </header>
 
-      <div className="flex flex-col h-[calc(100vh-180px)]">
+      <div className={`flex flex-col h-[calc(100vh-180px)] transition-all duration-300 ${sidebarOpen ? 'lg:ml-80' : ''}`}>
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {aiMessages.length === 0 ? (
@@ -451,7 +547,7 @@ export default function ChatAssistant() {
         <div className="px-4 py-3">
           <div className="flex space-x-2">
             <Input
-              placeholder="Type your message..."
+              placeholder={`Ask about ${activeSession?.title || 'your health'}...`}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}

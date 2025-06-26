@@ -136,6 +136,22 @@ export const createActions = (dispatch: React.Dispatch<AppAction>) => ({
     }
   },
 
+  clearAIMessages: () => {
+    try {
+      dispatch({ type: "CLEAR_AI_MESSAGES" })
+      dispatch({ type: "CLEAR_ERROR", payload: "ai-messages" })
+    } catch (error) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: {
+          key: "ai-messages",
+          message: "Failed to clear AI messages",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      })
+    }
+  },
+
   // Error handling actions
   clearError: (key: string) => {
     dispatch({ type: "CLEAR_ERROR", payload: key })
