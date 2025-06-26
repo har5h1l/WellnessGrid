@@ -105,9 +105,9 @@ Based on the conversation history above, improve this medical response for the u
 
 User-friendly version:`;
 
-// RAG failure fallback prompt template
-const RAG_FAILURE_FALLBACK_TEMPLATE = `
-You are a medical assistant providing guidance when specific medical documents are not available. A user has asked a health-related question, but our medical document retrieval system could not find relevant information to answer their query.
+// Medical model failure fallback prompt template
+const MEDICAL_MODEL_FALLBACK_TEMPLATE = `
+You are a medical assistant providing guidance when the specialized medical model is unavailable. A user has asked a health-related question, but our medical model could not process or respond to their query.
 
 Your role:
 - Provide helpful, general medical guidance based on established medical knowledge
@@ -489,14 +489,16 @@ export class LLMService {
   }
 
   /**
-   * Handle RAG failure with diagnostic fallback
+   * Handle medical model failure with general medical knowledge fallback
+   * This is used when the medical model fails to generate a response,
+   * providing general medical guidance without specific RAG documents
    */
-  async handleRAGFailure(originalUserQuery: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
-    console.log('🚨 RAG failure detected, using diagnostic fallback...');
+  async handleMedicalModelFailure(originalUserQuery: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
+    console.log('🚨 Medical model failure detected, using general medical knowledge fallback...');
     
     // Choose method based on whether we have chat history
     if (chatHistory.length > 0) {
-      console.log(`🚨 Using RAG failure fallback with chat history (${chatHistory.length} messages)`);
+      console.log(`🚨 Using medical model fallback with chat history (${chatHistory.length} messages)`);
       
       // Format messages for Gemini
       const geminiMessages = chatHistory.map(msg => ({
@@ -506,7 +508,7 @@ export class LLMService {
       
       // Add context about the conversation and the current query
       const contextualPrompt = `
-You are a medical assistant providing guidance when specific medical documents are not available. The user has been having a conversation with our medical AI system, and now has asked a question that our document retrieval system could not find relevant information for.
+You are a medical assistant providing guidance when the specialized medical model is unavailable. The user has been having a conversation with our medical AI system, and now has asked a question that our medical model could not process or respond to.
 
 Your role:
 - Provide helpful, general medical guidance based on established medical knowledge
@@ -534,7 +536,7 @@ Helpful response:`;
         parts: [{ text: contextualPrompt }]
       });
       
-      console.log(`\n[LLM Service] RAG Failure Fallback with History:\n${'-'.repeat(50)}`);
+      console.log(`\n[LLM Service] Medical Model Fallback with History:\n${'-'.repeat(50)}`);
       geminiMessages.forEach((msg, i) => {
         console.log(`${i + 1}. ${msg.role}: ${msg.parts[0].text.substring(0, 100)}...`);
       });
@@ -547,7 +549,7 @@ Helpful response:`;
       }
 
       // Fallback to OpenRouter with history
-      console.log('Falling back to OpenRouter for RAG failure handling with history');
+      console.log('Falling back to OpenRouter for medical model failure handling with history');
       const historyWithPrompt = [...chatHistory, { 
         session_id: '', 
         role: 'user' as const, 
@@ -559,8 +561,8 @@ Helpful response:`;
       }
     } else {
       // No history - use simple prompt
-      const fallbackPrompt = RAG_FAILURE_FALLBACK_TEMPLATE.replace('{originalUserQuery}', originalUserQuery);
-      console.log(`\n[LLM Service] RAG Failure Fallback Prompt:\n${'-'.repeat(50)}\n${fallbackPrompt}\n${'-'.repeat(50)}`);
+      const fallbackPrompt = MEDICAL_MODEL_FALLBACK_TEMPLATE.replace('{originalUserQuery}', originalUserQuery);
+      console.log(`\n[LLM Service] Medical Model Fallback Prompt:\n${'-'.repeat(50)}\n${fallbackPrompt}\n${'-'.repeat(50)}`);
       
       // Try Gemini first
       const geminiResult = await this.callGemini(fallbackPrompt);
@@ -569,7 +571,7 @@ Helpful response:`;
       }
 
       // Fallback to OpenRouter
-      console.log('Falling back to OpenRouter for RAG failure handling');
+      console.log('Falling back to OpenRouter for medical model failure handling');
       const openRouterResult = await this.callOpenRouter(fallbackPrompt);
       if (openRouterResult.success) {
         return openRouterResult;

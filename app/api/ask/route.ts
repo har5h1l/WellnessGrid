@@ -245,57 +245,13 @@ class EnhancedSupabaseRAGSystem {
     
     console.log(`🎯 Average similarity: ${avgSimilarity.toFixed(3)}, Threshold: ${SIMILARITY_THRESHOLD}`);
     
-    // Step 5: Check for RAG failure and use diagnostic fallback if needed
+    // Step 5: Check for RAG failure detection (for metadata tracking)
+    let ragFailureDetected = false;
     if (similarDocs.length === 0 || avgSimilarity < SIMILARITY_THRESHOLD) {
       console.log('🚨 RAG failure detected: insufficient or low-quality retrieval results');
-      fallbacksUsed.push('rag_failure_fallback_used');
-      
-      // Use LLM diagnostic fallback
-      const fallbackResponse = await llmService.handleRAGFailure(question, chatHistory.messages);
-      if (fallbackResponse.success) {
-        const finalAnswer = fallbackResponse.content;
-        
-        // Save conversation to database
-        console.log('💾 Saving RAG fallback conversation to database...');
-        await chatService.insertMessagePair(
-          chatHistory.sessionId,
-          question,
-          finalAnswer,
-          {
-            queryEnhanced,
-            responseImproved: false,
-            documentsUsed: 0,
-            flaskBackendUsed: false,
-            ragFailureFallback: true
-          }
-        );
-        
-        const processingTime = ((Date.now() - startTime) / 1000).toFixed(2) + 's';
-        console.log('⏱️ Total processing time (RAG fallback):', processingTime);
-        
-        return {
-          query: question,
-          enhancedQuery: queryEnhanced ? finalQuery : undefined,
-          answer: finalAnswer,
-          sources: [],
-          sessionId: chatHistory.sessionId,
-          metadata: {
-            documentsUsed: 0,
-            totalFound: similarDocs.length,
-            contextLength: 0,
-            flaskBackendUsed: false,
-            processingTime: new Date().toISOString(),
-            chatHistoryUsed: hasHistory,
-            messagesInHistory: chatHistory.messages.length,
-            llmEnhancement: {
-              queryEnhanced,
-              queryEnhancementService,
-              responseImproved: false,
-              fallbacksUsed
-            }
-          }
-        };
-      }
+      console.log('📄 Will still attempt medical model generation, falling back to LLM only if medical model fails');
+      ragFailureDetected = true;
+      fallbacksUsed.push('rag_failure_detected');
     }
     
     // Step 6: Prepare context from retrieved documents
@@ -318,23 +274,46 @@ class EnhancedSupabaseRAGSystem {
     // Step 7: Generate response using Flask BioGPT (GPU-accelerated) with chat history
     let generatedAnswer = null;
     let flaskBackendUsed = false;
+    
+    // Always attempt medical model generation, even with no/poor quality documents
     if (context.length > 0) {
-      console.log('🔬 Generating response with BioMistral/BioGPT...');
+      console.log('🔬 Generating response with BioMistral/BioGPT using retrieved context...');
       generatedAnswer = await this.generateResponse(finalQuery, context, chatHistory.messages);
-      if(generatedAnswer) {
-        flaskBackendUsed = true;
-        console.log(`\n[API] Raw Answer from BioMistral:\n${'-'.repeat(50)}\n${generatedAnswer}\n${'-'.repeat(50)}`);
-      } else {
-        fallbacksUsed.push('generation_failed');
-        console.log('\n[API] BioMistral response generation failed.');
-      }
+    } else if (ragFailureDetected) {
+      console.log('🔬 No quality documents found, but attempting BioMistral generation without specific context...');
+      // Provide minimal context for medical model when no documents found
+      const fallbackContext = "General medical knowledge and clinical reasoning.";
+      generatedAnswer = await this.generateResponse(finalQuery, fallbackContext, chatHistory.messages);
     }
     
-    // Step 8: Prepare initial response
-    const rawAnswer = generatedAnswer || 
-      (similarDocs.length > 0 
-        ? "Based on the available medical information, I found relevant context but couldn't generate a response. This may be due to a timeout from the medical generation model. Please try again, and if the issue persists, a simpler query might work better."
-        : "I couldn't find relevant information for your query. Please consult with a healthcare professional for medical advice.");
+    if(generatedAnswer) {
+      flaskBackendUsed = true;
+      console.log(`\n[API] Raw Answer from BioMistral:\n${'-'.repeat(50)}\n${generatedAnswer}\n${'-'.repeat(50)}`);
+    } else {
+      fallbacksUsed.push('medical_model_generation_failed');
+      console.log('\n[API] BioMistral response generation failed.');
+    }
+    
+    // Step 8: Prepare initial response or use LLM fallback if medical model failed
+    let rawAnswer = generatedAnswer;
+    
+    if (!generatedAnswer) {
+      console.log('🚨 Medical model failed to generate response, using LLM diagnostic fallback...');
+      fallbacksUsed.push('llm_fallback_used');
+      
+      // Use LLM diagnostic fallback when medical model fails
+      const fallbackResponse = await llmService.handleMedicalModelFailure(question, chatHistory.messages);
+      if (fallbackResponse.success) {
+        rawAnswer = fallbackResponse.content;
+        console.log(`\n[API] LLM Fallback Response:\n${'-'.repeat(50)}\n${rawAnswer}\n${'-'.repeat(50)}`);
+      } else {
+        // Final fallback if both medical model and LLM fail
+        rawAnswer = ragFailureDetected 
+          ? "I couldn't find relevant information for your query and am experiencing technical difficulties. Please consult with a healthcare professional for medical advice."
+          : "Based on the available medical information, I found relevant context but couldn't generate a response. This may be due to a timeout from the medical generation model. Please try again, and if the issue persists, a simpler query might work better.";
+        fallbacksUsed.push('all_services_failed');
+      }
+    }
     
     // Step 9: Improve response communication using Gemini/OpenRouter with chat history
     let finalAnswer = rawAnswer;

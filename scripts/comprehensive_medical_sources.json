@@ -1,0 +1,490 @@
+{
+  "medical_sources": {
+    "global_health_organizations": {
+      "priority": "high",
+      "sources": [
+        {
+          "name": "WHO Guidelines",
+          "base_url": "https://www.who.int",
+          "endpoints": [
+            "/health-topics/diabetes",
+            "/health-topics/cardiovascular-diseases",
+            "/health-topics/mental-disorders",
+            "/health-topics/cancer",
+            "/health-topics/respiratory-diseases",
+            "/health-topics/infectious-diseases",
+            "/health-topics/nutrition",
+            "/health-topics/physical-activity",
+            "/health-topics/hypertension",
+            "/health-topics/obesity",
+            "/health-topics/stroke",
+            "/health-topics/chronic-kidney-disease",
+            "/health-topics/liver-disease",
+            "/health-topics/epilepsy",
+            "/health-topics/osteoarthritis"
+          ],
+          "feeds": [
+            "https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml",
+            "https://www.who.int/feeds/entity/publications/en/rss.xml"
+          ]
+        },
+        {
+          "name": "UN Health Resources",
+          "base_url": "https://www.un.org",
+          "endpoints": [
+            "/en/global-issues/health",
+            "/sustainabledevelopment/health"
+          ]
+        }
+      ]
+    },
+    "us_government_health": {
+      "priority": "high",
+      "sources": [
+        {
+          "name": "CDC",
+          "base_url": "https://www.cdc.gov",
+          "endpoints": [
+            "/diabetes/basics/diabetes.html",
+            "/heartdisease/about.htm",
+            "/mentalhealth/basics/mental-illness/index.htm",
+            "/cancer/dcpc/about/index.htm",
+            "/copd/basics-about.html",
+            "/bloodpressure/about.htm",
+            "/cholesterol/about.htm",
+            "/obesity/basics/causes.html",
+            "/physicalactivity/basics/pa-health/index.htm",
+            "/nutrition/basics/index.html",
+            "/sleep/about_sleep/sleep_hygiene.html",
+            "/tobacco/basic_information/health_effects/index.htm",
+            "/alcohol/basics/index.htm",
+            "/vaccines/basics/index.html",
+            "/handwashing/when-how-handwashing.html",
+            "/stroke/about.htm",
+            "/arthritis/basics/index.html",
+            "/opioids/basics/index.html",
+            "/injury/basics/index.html",
+            "/aging/basics/index.html"
+          ]
+        },
+        {
+          "name": "NIH_NHLBI",
+          "base_url": "https://www.nhlbi.nih.gov",
+          "endpoints": [
+            "/health/heart",
+            "/health/blood-pressure",
+            "/health/cholesterol",
+            "/health/sleep",
+            "/health/stroke",
+            "/health/copd",
+            "/health/asthma"
+          ]
+        },
+        {
+          "name": "NIH_NIDDK",
+          "base_url": "https://www.niddk.nih.gov",
+          "endpoints": [
+            "/health-information/diabetes",
+            "/health-information/kidney-disease",
+            "/health-information/liver-disease",
+            "/health-information/digestive-diseases",
+            "/health-information/weight-management"
+          ]
+        },
+        {
+          "name": "NIH_NIMH",
+          "base_url": "https://www.nimh.nih.gov",
+          "endpoints": [
+            "/health/topics/depression",
+            "/health/topics/anxiety-disorders",
+            "/health/topics/bipolar-disorder",
+            "/health/topics/eating-disorders",
+            "/health/topics/post-traumatic-stress-disorder-ptsd",
+            "/health/topics/attention-deficit-hyperactivity-disorder-adhd",
+            "/health/topics/autism-spectrum-disorders-asd",
+            "/health/topics/schizophrenia",
+            "/health/topics/substance-use-and-mental-health"
+          ]
+        },
+        {
+          "name": "MedlinePlus",
+          "base_url": "https://medlineplus.gov",
+          "endpoints": [
+            "/diabetesmellitus.html",
+            "/heartdisease.html",
+            "/mentalhealth.html",
+            "/cancer.html",
+            "/copd.html",
+            "/highbloodpressure.html",
+            "/cholesterol.html",
+            "/obesity.html",
+            "/exercise.html",
+            "/nutrition.html",
+            "/sleep.html",
+            "/smoking.html",
+            "/alcoholism.html",
+            "/immunization.html",
+            "/germsandhygiene.html",
+            "/stroke.html",
+            "/arthritis.html",
+            "/osteoporosis.html",
+            "/kidneydisease.html",
+            "/liverdisease.html",
+            "/alzheimers.html",
+            "/parkinsons.html",
+            "/epilepsy.html",
+            "/asthma.html",
+            "/allergies.html"
+          ]
+        }
+      ]
+    },
+    "medical_associations": {
+      "priority": "high",
+      "sources": [
+        {
+          "name": "American_Heart_Association",
+          "base_url": "https://www.heart.org",
+          "endpoints": [
+            "/en/health-topics/consumer-healthcare/what-is-cardiovascular-disease",
+            "/en/health-topics/high-blood-pressure",
+            "/en/health-topics/cholesterol",
+            "/en/health-topics/stroke",
+            "/en/healthy-living/healthy-eating",
+            "/en/healthy-living/fitness"
+          ]
+        },
+        {
+          "name": "American_Cancer_Society",
+          "base_url": "https://www.cancer.org",
+          "endpoints": [
+            "/cancer/breast-cancer.html",
+            "/cancer/lung-cancer.html",
+            "/cancer/prostate-cancer.html",
+            "/cancer/colon-rectal-cancer.html",
+            "/cancer/skin-cancer.html",
+            "/healthy-living/eat-healthy-get-active.html",
+            "/treatment/understanding-your-diagnosis.html"
+          ]
+        },
+        {
+          "name": "American_Diabetes_Association",
+          "base_url": "https://diabetes.org",
+          "endpoints": [
+            "/diabetes/type-1",
+            "/diabetes/type-2",
+            "/diabetes/gestational-diabetes",
+            "/healthy-living/recipes-nutrition",
+            "/healthy-living/fitness",
+            "/diabetes/complications"
+          ]
+        },
+        {
+          "name": "American_Lung_Association",
+          "base_url": "https://www.lung.org",
+          "endpoints": [
+            "/lung-health-diseases/lung-disease-lookup/copd",
+            "/lung-health-diseases/lung-disease-lookup/asthma",
+            "/lung-health-diseases/lung-disease-lookup/lung-cancer",
+            "/clean-air/at-home",
+            "/quit-smoking"
+          ]
+        },
+        {
+          "name": "American_Psychiatric_Association",
+          "base_url": "https://www.psychiatry.org",
+          "endpoints": [
+            "/patients-families/depression",
+            "/patients-families/anxiety-disorders",
+            "/patients-families/bipolar-disorders",
+            "/patients-families/ptsd",
+            "/patients-families/eating-disorders",
+            "/patients-families/addiction-substance-use-disorders"
+          ]
+        }
+      ]
+    },
+    "evidence_based_medicine": {
+      "priority": "high",
+      "sources": [
+        {
+          "name": "Cochrane_Library",
+          "base_url": "https://www.cochranelibrary.com",
+          "endpoints": [
+            "/collections/doi/10.1002/14651858.CD.reviews/abstract",
+            "/cdsr/reviews"
+          ]
+        },
+        {
+          "name": "USPSTF",
+          "base_url": "https://www.uspreventiveservicestaskforce.org",
+          "endpoints": [
+            "/uspstf/recommendations",
+            "/uspstf/topic/cardiovascular-disease",
+            "/uspstf/topic/cancer",
+            "/uspstf/topic/diabetes",
+            "/uspstf/topic/mental-health",
+            "/uspstf/topic/substance-abuse"
+          ]
+        }
+      ]
+    },
+    "clinical_guidelines": {
+      "priority": "high",
+      "sources": [
+        {
+          "name": "ACP_Guidelines",
+          "base_url": "https://www.acponline.org",
+          "endpoints": [
+            "/clinical-information/guidelines",
+            "/clinical-information/clinical-topics"
+          ]
+        },
+        {
+          "name": "AAFP_Guidelines",
+          "base_url": "https://www.aafp.org",
+          "endpoints": [
+            "/afp/recommendations",
+            "/patient-care/clinical-recommendations"
+          ]
+        },
+        {
+          "name": "ACS_Guidelines",
+          "base_url": "https://www.ahajournals.org",
+          "endpoints": [
+            "/guidelines",
+            "/scientific-statements"
+          ]
+        }
+      ]
+    },
+    "international_health": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "NHS_UK",
+          "base_url": "https://www.nhs.uk",
+          "endpoints": [
+            "/conditions/type-2-diabetes",
+            "/conditions/heart-disease",
+            "/conditions/depression",
+            "/conditions/cancer",
+            "/conditions/high-blood-pressure",
+            "/conditions/stroke",
+            "/conditions/obesity",
+            "/conditions/asthma",
+            "/conditions/copd",
+            "/live-well/eat-well",
+            "/live-well/exercise",
+            "/live-well/mental-wellbeing"
+          ]
+        },
+        {
+          "name": "Health_Canada",
+          "base_url": "https://www.canada.ca",
+          "endpoints": [
+            "/en/health-canada/services/healthy-living",
+            "/en/public-health/services/chronic-diseases",
+            "/en/health-canada/services/food-nutrition"
+          ]
+        },
+        {
+          "name": "Australian_Health",
+          "base_url": "https://www.health.gov.au",
+          "endpoints": [
+            "/health-topics/diabetes",
+            "/health-topics/heart-disease",
+            "/health-topics/mental-health",
+            "/health-topics/cancer",
+            "/health-topics/obesity"
+          ]
+        }
+      ]
+    },
+    "medical_education": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "Khan_Academy_Medicine",
+          "base_url": "https://www.khanacademy.org",
+          "endpoints": [
+            "/science/health-and-medicine/circulatory-system",
+            "/science/health-and-medicine/respiratory-system",
+            "/science/health-and-medicine/digestive-system",
+            "/science/health-and-medicine/nervous-system",
+            "/science/health-and-medicine/endocrine-system"
+          ]
+        },
+        {
+          "name": "OpenStax_Medical",
+          "base_url": "https://openstax.org",
+          "endpoints": [
+            "/details/books/anatomy-and-physiology",
+            "/details/books/microbiology",
+            "/details/books/psychology"
+          ]
+        }
+      ]
+    },
+    "specialty_medicine": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "Endocrine_Society",
+          "base_url": "https://www.endocrine.org",
+          "endpoints": [
+            "/patient-engagement/endocrine-library",
+            "/clinical-practice-guidelines"
+          ]
+        },
+        {
+          "name": "Kidney_Foundation",
+          "base_url": "https://www.kidney.org",
+          "endpoints": [
+            "/atoz",
+            "/professionals/guidelines"
+          ]
+        },
+        {
+          "name": "Liver_Foundation",
+          "base_url": "https://liverfoundation.org",
+          "endpoints": [
+            "/for-patients/about-the-liver",
+            "/for-patients/liver-diseases"
+          ]
+        },
+        {
+          "name": "Epilepsy_Foundation",
+          "base_url": "https://www.epilepsy.com",
+          "endpoints": [
+            "/learn/about-epilepsy-seizures",
+            "/learn/managing-your-epilepsy"
+          ]
+        }
+      ]
+    },
+    "preventive_health": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "Preventive_Services",
+          "base_url": "https://www.cdc.gov",
+          "endpoints": [
+            "/prevention/index.html",
+            "/cancer/dcpc/prevention/index.htm",
+            "/heartdisease/prevention.htm",
+            "/diabetes/prevention/index.html"
+          ]
+        },
+        {
+          "name": "Nutrition_Guidelines",
+          "base_url": "https://www.dietaryguidelines.gov",
+          "endpoints": [
+            "/sites/default/files/2021-03/Dietary_Guidelines_for_Americans-2020-2025.pdf"
+          ]
+        }
+      ]
+    },
+    "open_access_research": {
+      "priority": "medium",
+      "api_sources": [
+        {
+          "name": "PubMed_Central",
+          "base_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
+          "search_terms": [
+            "diabetes+management",
+            "cardiovascular+disease+prevention",
+            "mental+health+treatment",
+            "cancer+screening",
+            "chronic+disease+management",
+            "nutrition+therapy",
+            "exercise+medicine",
+            "sleep+disorders",
+            "preventive+medicine",
+            "primary+care+guidelines",
+            "hypertension+treatment",
+            "obesity+management",
+            "stroke+prevention",
+            "asthma+treatment",
+            "copd+management",
+            "arthritis+treatment",
+            "osteoporosis+prevention",
+            "kidney+disease+management",
+            "liver+disease+treatment",
+            "epilepsy+management"
+          ]
+        },
+        {
+          "name": "DOAJ",
+          "base_url": "https://doaj.org",
+          "api_endpoint": "/api/v2/search/articles/",
+          "search_terms": [
+            "primary care",
+            "chronic disease",
+            "preventive medicine",
+            "public health",
+            "clinical medicine"
+          ]
+        }
+      ]
+    },
+    "drug_information": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "FDA_Drugs",
+          "base_url": "https://www.fda.gov",
+          "endpoints": [
+            "/drugs/drug-safety-and-availability",
+            "/drugs/drug-approvals-and-databases",
+            "/drugs/postmarket-drug-safety-information-patients-and-providers"
+          ]
+        },
+        {
+          "name": "DailyMed",
+          "base_url": "https://dailymed.nlm.nih.gov",
+          "endpoints": [
+            "/dailymed/drugInfo.cfm"
+          ]
+        }
+      ]
+    },
+    "emergency_medicine": {
+      "priority": "medium",
+      "sources": [
+        {
+          "name": "Red_Cross",
+          "base_url": "https://www.redcross.org",
+          "endpoints": [
+            "/get-help/how-to-prepare-for-emergencies/types-of-emergencies",
+            "/take-a-class/first-aid"
+          ]
+        },
+        {
+          "name": "Emergency_Care",
+          "base_url": "https://medlineplus.gov",
+          "endpoints": [
+            "/firstaid.html",
+            "/emergencies.html",
+            "/poisoning.html"
+          ]
+        }
+      ]
+    }
+  },
+  "scraping_config": {
+    "max_documents_per_source": 20,
+    "content_min_length": 500,
+    "request_delay": 1,
+    "timeout": 30,
+    "retry_attempts": 3,
+    "concurrent_sources": 4,
+    "user_agent": "WellnessGrid-RAG-System/1.0 (Medical Research; Contact: research@wellnessgrid.com)"
+  },
+  "content_filters": {
+    "remove_elements": ["script", "style", "nav", "header", "footer", "aside", "form", "advertisement"],
+    "content_selectors": ["main", "article", ".content", ".main-content", ".article-content", ".post-content", "#content"],
+    "min_words": 100,
+    "max_words": 10000
+  }
+} 
