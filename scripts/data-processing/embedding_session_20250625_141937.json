@@ -1,0 +1,101 @@
+{
+  "embedding_session": {
+    "timestamp": "2025-06-25T14:19:37.623308",
+    "scraping_session": {
+      "timestamp": "2025-06-25T14:16:10.640481",
+      "total_documents": 86,
+      "failed_urls": [
+        "https://www.cdc.gov/diabetes/basics/diabetes.html",
+        "https://www.cdc.gov/heartdisease/about.htm",
+        "https://medlineplus.gov/heartdisease.html",
+        "https://www.cdc.gov/mentalhealth/basics/mental-illness/index.htm",
+        "https://www.cdc.gov/cancer/dcpc/about/index.htm",
+        "https://www.cdc.gov/copd/basics-about.html",
+        "https://www.cdc.gov/bloodpressure/about.htm",
+        "https://www.cdc.gov/cholesterol/about.htm",
+        "https://www.cdc.gov/obesity/basics/causes.html",
+        "https://www.cdc.gov/physicalactivity/basics/pa-health/index.htm",
+        "https://www.cdc.gov/nutrition/basics/index.html",
+        "https://www.cdc.gov/sleep/about_sleep/sleep_hygiene.html",
+        "https://www.cdc.gov/tobacco/basic_information/health_effects/index.htm",
+        "https://www.cdc.gov/alcohol/basics/index.htm",
+        "https://www.cdc.gov/handwashing/when-how-handwashing.html",
+        "https://medlineplus.gov/exercise.html",
+        "https://www.cdc.gov/stroke/about.htm",
+        "https://www.cdc.gov/aging/basics/index.html",
+        "https://medlineplus.gov/sleep.html",
+        "https://www.cancer.org/healthy-living/eat-healthy-get-active.html",
+        "https://medlineplus.gov/kidneydisease.html",
+        "https://medlineplus.gov/liverdisease.html",
+        "https://www.who.int/health-topics/respiratory-diseases",
+        "https://medlineplus.gov/alzheimers.html",
+        "https://medlineplus.gov/parkinsons.html",
+        "https://www.nhlbi.nih.gov/health/blood-pressure",
+        "https://www.nhlbi.nih.gov/health/cholesterol",
+        "https://www.nhs.uk/conditions/heart-disease",
+        "https://liverfoundation.org/for-patients/about-the-liver",
+        "https://www.epilepsy.com/learn/about-epilepsy-seizures",
+        "https://www.cdc.gov/prevention/index.html",
+        "https://www.cdc.gov/cancer/dcpc/prevention/index.htm",
+        "https://www.cdc.gov/heartdisease/prevention.htm",
+        "https://www.cdc.gov/diabetes/prevention/index.html",
+        "https://medlineplus.gov/emergencies.html",
+        "https://www.who.int/health-topics/stroke",
+        "https://www.who.int/health-topics/chronic-kidney-disease",
+        "https://www.who.int/health-topics/liver-disease",
+        "https://www.health.gov.au/health-topics/diabetes",
+        "https://www.health.gov.au/health-topics/heart-disease",
+        "https://www.health.gov.au/health-topics/mental-health"
+      ],
+      "sources_covered": [
+        "CANCER_Association",
+        "NHS_UK",
+        "Red_Cross",
+        "HEART_Association",
+        "USPSTF",
+        "CDC",
+        "NIH_WWW",
+        "NIH_MedlinePlus",
+        "DIABETES_Association",
+        "LUNG_Association",
+        "Health_Canada",
+        "PSYCHIATRY_Association",
+        "KIDNEY_Association",
+        "MedlinePlus_Emergency",
+        "PubMed_Central",
+        "WHO"
+      ],
+      "categories_covered": [
+        "medical_associations",
+        "patient_education",
+        "international_health",
+        "public_health",
+        "research_literature",
+        "preventive_health",
+        "government_health",
+        "global_health"
+      ],
+      "document_types": [
+        "patient_education",
+        "research_article",
+        "professional_guideline",
+        "medical_information",
+        "health_information",
+        "health_topic",
+        "prevention_guide"
+      ]
+    },
+    "embedding_results": {
+      "embedded_count": 0,
+      "skipped_count": 0,
+      "failed_count": 86,
+      "total_chunks": 0
+    },
+    "model_info": {
+      "embedding_model": "NeuML/pubmedbert-base-embeddings",
+      "dimensions": 768,
+      "chunk_size": 1000,
+      "chunk_overlap": 100
+    }
+  }
+}

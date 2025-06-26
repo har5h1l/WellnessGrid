@@ -1,6 +1,49 @@
-# WellnessGrid Document Embedding System
+# WellnessGrid Scripts
 
-A clean, organized system for managing medical document embeddings with external source management and duplicate prevention.
+This directory contains various scripts and utilities for the WellnessGrid application, organized by functionality.
+
+## Directory Structure
+
+### 📊 data-processing/
+Contains scripts for data processing, embedding, and database operations:
+- `embed_documents.py` - Main document embedding script
+- `embed_scraped_documents.py` - Embed scraped medical documents
+- `embed_via_mcp.py` - Embedding via MCP protocol
+- `run_rag_expansion.py` - RAG system expansion utilities
+- `bulk_migration.py` - Database migration utilities
+- `batch_insert.py` - Batch data insertion
+- `rapid_insertion.py` - Fast data insertion
+- `execute_embedding_sql.py` - Execute embedding SQL scripts
+
+### 🌐 web-scraping/
+Contains web scraping scripts and scraped data:
+- `medical_document_scraper.py` - Main medical document scraper
+- `enhanced_medical_scraper.py` - Enhanced scraping with better error handling
+- `scraped_medical_documents.json` - Scraped medical documents
+- `comprehensive_medical_sources.json` - Medical source configurations
+- `requirements_scraper.txt` - Python requirements for scraping
+
+### 🗄️ database/
+Contains SQL batch files and database operations:
+- `batch_*.sql` - Document batch insertion files
+- `doc_batch_*.sql` - Document batch files
+- `emb_batch_*.sql` - Embedding batch files
+- `embedding_sql_*.sql` - Large embedding SQL files
+- `corrected_embeddings.sql` - Corrected embedding data
+
+### 📦 archive/
+Contains old, test, and temporary files:
+- Test scripts and utilities
+- Temporary files
+- Old versions of scripts
+
+## Main Files
+
+- `RAG_EXPANSION_README.md` - Documentation for RAG expansion process
+
+## Usage
+
+Each subdirectory contains specialized scripts for different aspects of the WellnessGrid system. Refer to individual script documentation for usage instructions.
 
 ## 📁 File Structure
 

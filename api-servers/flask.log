@@ -1,0 +1,41 @@
+🚀 Starting Simple Flask Server for WellnessGrid...
+📡 Available endpoints:
+  - GET  /health
+  - POST /embed (PubMedBERT embeddings)
+  - POST /generate (Simple text responses)
+
+⚠️  Models will download on first use!
+🔧 Server starting on http://localhost:5001
+
+ * Serving Flask app 'simple_flask'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.187.65.131:5001
+Press CTRL+C to quit
+ * Restarting with watchdog (fsevents)
+ * Debugger is active!
+ * Debugger PIN: 103-784-277
+🚀 Starting Simple Flask Server for WellnessGrid...
+📡 Available endpoints:
+  - GET  /health
+  - POST /embed (PubMedBERT embeddings)
+  - POST /generate (Simple text responses)
+
+⚠️  Models will download on first use!
+🔧 Server starting on http://localhost:5001
+
+Traceback (most recent call last):
+  File "/Users/harshilshah/Desktop/WellnessGrid App/simple_flask.py", line 95, in <module>
+    app.run(host='0.0.0.0', port=5001, debug=True) 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.11/site-packages/flask/app.py", line 625, in run
+    run_simple(t.cast(str, host), port, self, **options)
+  File "/opt/anaconda3/lib/python3.11/site-packages/werkzeug/serving.py", line 1115, in run_simple
+    run_with_reloader(
+  File "/opt/anaconda3/lib/python3.11/site-packages/werkzeug/_reloader.py", line 459, in run_with_reloader
+    ensure_echo_on()
+  File "/opt/anaconda3/lib/python3.11/site-packages/werkzeug/_reloader.py", line 439, in ensure_echo_on
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, attributes)
+termios.error: (4, 'Interrupted system call')

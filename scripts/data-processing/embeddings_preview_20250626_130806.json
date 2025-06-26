@@ -1,0 +1,97 @@
+{
+  "total_embeddings": 809,
+  "embedding_dimension": 768,
+  "created_at": "2025-06-26T13:08:06.423765",
+  "preview_entries": [
+    {
+      "document_id": "4586485049e2e4a07c110dbac5cac4e5",
+      "chunk_index": 0,
+      "chunk_content": "August 10, 2024 Español Vaccine Basics Modern vaccines contain only the ingredients that are needed for the vaccines to be as safe and effective as possible. Every vaccine ingredient serves a purpose To provide immunity We become immune to (or protected from) a disease when our bodies create specific antibodies to fight that disease. Vaccines contain ingredients that help your body build this immunity . To keep the vaccine safe and long-lasting Vaccines need to be safe and effective. Certain ingredients help keep vaccines safe from contamination and toxins. Others, like stabilizers, help vaccines stay effective for a long time. To make the vaccine more effective All vaccine ingredients help to make a vaccine as effective as possible, while being safe.",
+      "embedding": "[768D vector: [0.04945174604654312, 0.5198288559913635, 0.4124462604522705]...[0.40872862935066223, -0.9083208441734314, -0.0012691528536379337]]",
+      "document_metadata": {
+        "title": "Vaccine Basics | Vaccines & Immunizations | CDC (Part 1)",
+        "source": "CDC",
+        "topic": "general_health",
+        "url": "https://www.cdc.gov/vaccines/basics/index.html",
+        "document_type": "government_resource",
+        "category": "us_government_health",
+        "scraped_date": "2025-06-26T12:59:05.581445",
+        "chunk_count": 3,
+        "content_hash": "49254c984efc4bfbced7a94d144dfafe",
+        "word_count": 707
+      }
+    },
+    {
+      "document_id": "4586485049e2e4a07c110dbac5cac4e5",
+      "chunk_index": 1,
+      "chunk_content": "fective for a long time. To make the vaccine more effective All vaccine ingredients help to make a vaccine as effective as possible, while being safe. Ingredients like aluminum salt help boost the body's response to the vaccine. Ingredients found in some vaccines Stabilizers Purpose: To keep the vaccine effective after manufacturing Most commonly found in: Jell-O®, naturally in the body Examples: Sugars, gelatin Adjuvants Purpose: To help boost the body's response to the vaccine Most commonly found in: Drinking water, infant formula, and some health products such as antacids, buffered aspirin, and antiperspirants Examples: Aluminum salts Residual inactivating ingredients Purpose: To kill viruses or",
+      "embedding": "[768D vector: [-0.19152061641216278, 0.33634212613105774, 0.21898245811462402]...[0.6556012034416199, -1.226777195930481, 0.061518166214227676]]",
+      "document_metadata": {
+        "title": "Vaccine Basics | Vaccines & Immunizations | CDC (Part 1)",
+        "source": "CDC",
+        "topic": "general_health",
+        "url": "https://www.cdc.gov/vaccines/basics/index.html",
+        "document_type": "government_resource",
+        "category": "us_government_health",
+        "scraped_date": "2025-06-26T12:59:05.581445",
+        "chunk_count": 3,
+        "content_hash": "49254c984efc4bfbced7a94d144dfafe",
+        "word_count": 707
+      }
+    },
+    {
+      "document_id": "4586485049e2e4a07c110dbac5cac4e5",
+      "chunk_index": 2,
+      "chunk_content": "dual inactivating ingredients Purpose: To kill viruses or",
+      "embedding": "[768D vector: [-0.4069626033306122, 0.46849778294563293, 0.4671405553817749]...[-0.37135154008865356, -1.5241221189498901, -0.7970817685127258]]",
+      "document_metadata": {
+        "title": "Vaccine Basics | Vaccines & Immunizations | CDC (Part 1)",
+        "source": "CDC",
+        "topic": "general_health",
+        "url": "https://www.cdc.gov/vaccines/basics/index.html",
+        "document_type": "government_resource",
+        "category": "us_government_health",
+        "scraped_date": "2025-06-26T12:59:05.581445",
+        "chunk_count": 3,
+        "content_hash": "49254c984efc4bfbced7a94d144dfafe",
+        "word_count": 707
+      }
+    },
+    {
+      "document_id": "7f2080246ba61f269cd9a2b73455cb9d",
+      "chunk_index": 0,
+      "chunk_content": "Purpose: To help boost the body's response to the vaccine Most commonly found in: Drinking water, infant formula, and some health products such as antacids, buffered aspirin, and antiperspirants Examples: Aluminum salts Residual inactivating ingredients Purpose: To kill viruses or inactivate toxins during the manufacturing process Most commonly found in: Naturally in the human body, fruit, household furnishings (carpets, upholstering) Example: Formaldehyde A Residual cell culture materials Purpose: To grow enough of the virus or bacteria to make the vaccine Most commonly found in: Eggs, and foods that contain eggs Examples: Egg protein B Residual antibiotics Purpose: To prevent contamination by bacteria during the vaccine manufacturing process Most commonly found in: Common antibiotics.",
+      "embedding": "[768D vector: [-0.46064162254333496, 0.3158145546913147, 0.30717191100120544]...[1.0547125339508057, -0.8095206022262573, 0.11562512814998627]]",
+      "document_metadata": {
+        "title": "Vaccine Basics | Vaccines & Immunizations | CDC (Part 2)",
+        "source": "CDC",
+        "topic": "general_health",
+        "url": "https://www.cdc.gov/vaccines/basics/index.html",
+        "document_type": "government_resource",
+        "category": "us_government_health",
+        "scraped_date": "2025-06-26T12:59:05.581445",
+        "chunk_count": 3,
+        "content_hash": "49254c984efc4bfbced7a94d144dfafe",
+        "word_count": 707
+      }
+    },
+    {
+      "document_id": "7f2080246ba61f269cd9a2b73455cb9d",
+      "chunk_index": 1,
+      "chunk_content": "esidual antibiotics Purpose: To prevent contamination by bacteria during the vaccine manufacturing process Most commonly found in: Common antibiotics. Antibiotics that people are most likely to be allergic to—like penicillin—aren't used in vaccines. Examples: Neomycin, Kanamycin, Streptomycin Preservatives Purpose: To prevent contamination Most commonly found in: Some kinds of fish Example: Thimerosal C (only in multi-dose vials of flu vaccine) Most vaccines don't contain any mercury Most vaccines do not have any mercury in them. However, multi-dose flu vaccines and one type of tetanus-diphtheria (Td) vaccine contain a small amount of thimerosal. Thimerosal contains a form of mercury (ethylmercury) that does not cause mercury poisoning and",
+      "embedding": "[768D vector: [-0.6958459615707397, -0.0026815752498805523, 0.2748638391494751]...[1.049136757850647, -0.27994754910469055, -0.32363274693489075]]",
+      "document_metadata": {
+        "title": "Vaccine Basics | Vaccines & Immunizations | CDC (Part 2)",
+        "source": "CDC",
+        "topic": "general_health",
+        "url": "https://www.cdc.gov/vaccines/basics/index.html",
+        "document_type": "government_resource",
+        "category": "us_government_health",
+        "scraped_date": "2025-06-26T12:59:05.581445",
+        "chunk_count": 3,
+        "content_hash": "49254c984efc4bfbced7a94d144dfafe",
+        "word_count": 707
+      }
+    }
+  ]
+}
