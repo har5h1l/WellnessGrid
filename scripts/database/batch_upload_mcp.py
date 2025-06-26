@@ -74,7 +74,7 @@ def upload_embeddings():
     print("Starting embedding upload...")
     
     # Find all embedding batch files
-    embedding_files = sorted(BATCH_DIR.glob("embedding_batch_*.sql"))
+    embedding_files = sorted(BATCH_DIR.glob("new_embeddings_batch_*_20250626_130806.sql"))
     
     if not embedding_files:
         print("No embedding batch files found")
