@@ -326,7 +326,33 @@ export class DatabaseService {
     }
     
     console.log('Tracking entry created successfully:', data)
+    
+    // 🤖 Trigger automated insights generation (async, don't wait)
+    this.triggerInsightsGeneration(data as TrackingEntry).catch(error => {
+      console.error('Failed to trigger insights generation:', error)
+    })
+    
     return data
+  }
+
+  /**
+   * Trigger automated insights generation for new tracking entries
+   */
+  private static async triggerInsightsGeneration(entry: TrackingEntry): Promise<void> {
+    console.log('🤖 [DEBUG] Triggering insights generation for entry:', entry.tool_id, entry.user_id)
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { HealthInsightsService } = await import('@/lib/services/health-insights')
+      const { AlertService } = await import('@/lib/services/alert-service')
+      
+      // Run insights and alerts generation in parallel
+      await Promise.all([
+        HealthInsightsService.checkAndGenerateInsights(entry.user_id, entry),
+        AlertService.checkAndGenerateAlerts(entry.user_id, entry)
+      ])
+    } catch (error) {
+      console.error('Error in automated insights/alerts generation:', error)
+    }
   }
 
   static async updateTrackingEntry(entryId: string, updates: Partial<TrackingEntry>) {

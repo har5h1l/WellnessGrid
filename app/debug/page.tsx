@@ -3,8 +3,23 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { authHelpers, DatabaseService } from "@/lib/database"
 import { toast } from "sonner"
+
+// Safe dynamic import for services
+let authHelpers: any = null
+let DatabaseService: any = null
+
+const initializeServices = async () => {
+  try {
+    const { authHelpers: auth, DatabaseService: db } = await import('@/lib/database')
+    authHelpers = auth
+    DatabaseService = db
+    return true
+  } catch (error) {
+    console.error('Failed to initialize services:', error)
+    return false
+  }
+}
 
 export default function DebugPage() {
   const [user, setUser] = useState<any>(null)
@@ -14,6 +29,12 @@ export default function DebugPage() {
   const checkAuth = async () => {
     setLoading(true)
     try {
+      const servicesReady = await initializeServices()
+      if (!servicesReady) {
+        toast.error('Services not available')
+        return
+      }
+
       const currentUser = await authHelpers.getCurrentUser()
       setUser(currentUser)
       

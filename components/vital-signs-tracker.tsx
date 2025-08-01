@@ -129,7 +129,8 @@ export function VitalSignsTracker({ toolId, userTool, onEntry }: VitalSignsTrack
         timestamp: new Date().toISOString()
       }
 
-      await DatabaseService.createTrackingEntry(user.id, {
+      await DatabaseService.createTrackingEntry({
+        user_id: user.id,
         tool_id: toolId,
         data: entryData,
         timestamp: entryData.timestamp

@@ -509,4 +509,144 @@ export interface Database {
       [_ in never]: never
     }
   }
+}
+
+// Analytics Types
+export interface HealthInsight {
+  id?: string
+  user_id: string
+  insight_type: 'daily' | 'weekly' | 'monthly' | 'triggered' | 'on_demand'
+  insights: {
+    trends?: Array<{
+      metric: string
+      direction: 'improving' | 'declining' | 'stable'
+      confidence: number
+      description: string
+    }>
+    concerns?: Array<{
+      type: string
+      severity: 'low' | 'medium' | 'high'
+      description: string
+      recommendations: string[]
+    }>
+    recommendations?: Array<{
+      category: string
+      action: string
+      priority: 'low' | 'medium' | 'high'
+      rationale: string
+    }>
+    achievements?: Array<{
+      type: string
+      description: string
+      metric_improvement: number
+    }>
+  }
+  alerts: Array<{
+    type: string
+    severity: 'info' | 'warning' | 'urgent' | 'critical'
+    message: string
+    action_required?: string
+  }>
+  metadata: {
+    processing_time_ms?: number
+    data_points_analyzed?: number
+    llm_service_used?: string
+    confidence_score?: number
+  }
+  generated_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface HealthScore {
+  id?: string
+  user_id: string
+  overall_score: number
+  component_scores: {
+    glucose?: number
+    medication_adherence?: number
+    exercise?: number
+    sleep?: number
+    mood?: number
+    nutrition?: number
+    vital_signs?: number
+    symptom_severity?: number
+  }
+  trend: 'improving' | 'stable' | 'declining' | 'insufficient_data'
+  score_period: string
+  calculated_at?: string
+  created_at?: string
+}
+
+export interface UserAlert {
+  id?: string
+  user_id: string
+  alert_type: string
+  severity: 'info' | 'warning' | 'urgent' | 'critical'
+  title: string
+  message: string
+  action_required?: string
+  metadata: {
+    tool_id?: string
+    metric_value?: number
+    threshold?: number
+    related_entries?: string[]
+  }
+  is_read: boolean
+  is_dismissed: boolean
+  expires_at?: string
+  created_at?: string
+}
+
+export interface AnalyticsCache {
+  id?: string
+  user_id: string
+  cache_key: string
+  cache_data: any
+  expires_at: string
+  created_at?: string
+}
+
+export interface HealthTrend {
+  date: string
+  value: number
+  tool_id: string
+  metric: string
+}
+
+export interface CorrelationData {
+  metric1: string
+  metric2: string
+  correlation: number
+  significance: number
+  data_points: number
+}
+
+export interface GoalProgress {
+  goal_id: string
+  goal_name: string
+  target_value: number
+  current_value: number
+  progress_percentage: number
+  days_remaining?: number
+  trend: 'on_track' | 'behind' | 'ahead'
+}
+
+export interface StreakData {
+  tool_id: string
+  tool_name: string
+  current_streak: number
+  longest_streak: number
+  last_entry_date: string
+  streak_status: 'active' | 'broken' | 'at_risk'
+}
+
+export interface AnalyticsData {
+  trends: HealthTrend[]
+  correlations: CorrelationData[]
+  goals: GoalProgress[]
+  streaks: StreakData[]
+  health_score: HealthScore
+  insights: HealthInsight[]
+  alerts: UserAlert[]
 } 

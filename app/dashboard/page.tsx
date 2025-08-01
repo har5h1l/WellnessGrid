@@ -13,8 +13,23 @@ import { SymptomTracker } from "@/components/symptom-tracker"
 import { MedicationLogger } from "@/components/medication-logger"
 import { Activity, Heart, Pill, MessageCircle, TrendingUp, Clock, Bell, AlertTriangle, Target, ChevronRight, Star } from "lucide-react"
 import Link from "next/link"
-import { DatabaseService, authHelpers } from "@/lib/database"
 import type { UserProfile, HealthCondition, UserTool, TrackingEntry } from "@/lib/database"
+
+// Safe dynamic import for services
+let authHelpers: any = null
+let DatabaseService: any = null
+
+const initializeServices = async () => {
+  try {
+    const { authHelpers: auth, DatabaseService: db } = await import('@/lib/database')
+    authHelpers = auth
+    DatabaseService = db
+    return true
+  } catch (error) {
+    console.error('Failed to initialize services:', error)
+    return false
+  }
+}
 import { toolPresets } from "@/lib/data/mock-sources"
 import type { User } from '@supabase/supabase-js'
 import { toast } from "sonner"
@@ -40,6 +55,14 @@ export default function Dashboard() {
       try {
         setLoading(true)
         console.log('Dashboard: Loading user data...')
+        
+        // Initialize services first
+        const servicesReady = await initializeServices()
+        if (!servicesReady) {
+          console.error('Dashboard: Failed to initialize services')
+          toast.error('System unavailable. Please refresh the page.')
+          return
+        }
         
         const user = await authHelpers.getCurrentUser()
         if (!user) {

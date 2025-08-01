@@ -8,9 +8,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AppLogo } from "@/components/app-logo"
 import Link from "next/link"
-import { authHelpers, DatabaseService } from "@/lib/database"
-import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
+import { toast } from "sonner"
+
+// Dynamic imports to avoid potential SSR issues
+import dynamic from 'next/dynamic'
+
+// Safe import with error handling
+let authHelpers: any = null
+let DatabaseService: any = null
+
+// Initialize services safely
+const initializeServices = async () => {
+  try {
+    const { authHelpers: auth, DatabaseService: db } = await import('@/lib/database')
+    authHelpers = auth
+    DatabaseService = db
+    return true
+  } catch (error) {
+    console.error('Failed to initialize services:', error)
+    return false
+  }
+}
 
 export default function Login() {
   const router = useRouter()
@@ -28,26 +47,39 @@ export default function Login() {
   useEffect(() => {
     const checkAuth = async () => {
       console.log('Login page: Checking authentication...')
-      const user = await authHelpers.getCurrentUser()
-      if (user) {
-        console.log('Login page: User is authenticated:', user.email)
-        // Check if user has completed setup
-        try {
-          const userData = await DatabaseService.getUserProfile(user.id)
-          console.log('Login page: User profile data:', userData)
-          if (userData) {
-            console.log('Login page: Redirecting to dashboard')
-            router.push('/dashboard')
-          } else {
-            console.log('Login page: No profile found, redirecting to setup')
+      
+      // Initialize services first
+      const servicesReady = await initializeServices()
+      if (!servicesReady) {
+        console.error('Login page: Failed to initialize authentication services')
+        toast.error('Authentication system unavailable. Please refresh the page.')
+        return
+      }
+
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (user) {
+          console.log('Login page: User is authenticated:', user.email)
+          // Check if user has completed setup
+          try {
+            const userData = await DatabaseService.getUserProfile(user.id)
+            console.log('Login page: User profile data:', userData)
+            if (userData) {
+              console.log('Login page: Redirecting to dashboard')
+              router.push('/dashboard')
+            } else {
+              console.log('Login page: No profile found, redirecting to setup')
+              router.push('/setup')
+            }
+          } catch (error) {
+            console.log('Login page: Error fetching profile, redirecting to setup:', error)
             router.push('/setup')
           }
-        } catch (error) {
-          console.log('Login page: Error fetching profile, redirecting to setup:', error)
-          router.push('/setup')
+        } else {
+          console.log('Login page: No authenticated user found')
         }
-      } else {
-        console.log('Login page: No authenticated user found')
+      } catch (error) {
+        console.error('Login page: Authentication check failed:', error)
       }
     }
     checkAuth()
@@ -107,6 +139,12 @@ export default function Login() {
 
     setLoading(true)
     try {
+      // Ensure services are initialized
+      const servicesReady = await initializeServices()
+      if (!servicesReady) {
+        throw new Error('Authentication system is not available. Please refresh the page.')
+      }
+
       if (isSignUp) {
         // Sign up
         const { user } = await authHelpers.signUp(formData.email, formData.password, {
@@ -271,6 +309,10 @@ export default function Login() {
             size="sm"
             onClick={async () => {
               try {
+                const servicesReady = await initializeServices()
+                if (!servicesReady) {
+                  throw new Error('Authentication system not available')
+                }
                 await authHelpers.signOut()
                 toast.success('Signed out successfully')
                 window.location.reload()

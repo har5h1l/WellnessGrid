@@ -1,0 +1,47 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#ffffff"/>
+  
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef2f2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)"/>
+  
+  <!-- Logo and Title Centered -->
+  <g transform="translate(600, 315)">
+    <!-- Logo Circle -->
+    <circle cx="0" cy="-100" r="60" fill="#dc2626"/>
+    <text x="0" y="-90" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="20" font-weight="bold">W</text>
+    
+    <!-- Main Title -->
+    <text x="0" y="-20" text-anchor="middle" fill="#111827" font-family="Inter, sans-serif" font-size="48" font-weight="bold">
+      WellnessGrid
+    </text>
+    
+    <!-- Subtitle -->
+    <text x="0" y="20" text-anchor="middle" fill="#dc2626" font-family="Inter, sans-serif" font-size="24" font-weight="600">
+      AI Health Companion for Teens
+    </text>
+    
+    <!-- Description -->
+    <text x="0" y="60" text-anchor="middle" fill="#6b7280" font-family="Inter, sans-serif" font-size="18">
+      Track • Analyze • Improve Your Health with AI
+    </text>
+    
+    <!-- Call to Action -->
+    <rect x="-80" y="80" width="160" height="40" rx="20" fill="#dc2626"/>
+    <text x="0" y="105" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="16" font-weight="600">
+      Get Started Free
+    </text>
+  </g>
+  
+  <!-- Decorative Elements -->
+  <circle cx="100" cy="100" r="3" fill="#dc2626" opacity="0.3"/>
+  <circle cx="1100" cy="530" r="3" fill="#dc2626" opacity="0.3"/>
+  <circle cx="150" cy="500" r="2" fill="#dc2626" opacity="0.2"/>
+  <circle cx="1050" cy="120" r="2" fill="#dc2626" opacity="0.2"/>
+</svg>

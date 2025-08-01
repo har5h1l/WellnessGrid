@@ -427,3 +427,98 @@ CREATE TRIGGER update_user_goals_updated_at BEFORE UPDATE ON public.user_goals
 
 CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON public.user_settings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column(); 
+
+-- Add indexes for tracking_entries for better analytics performance
+CREATE INDEX IF NOT EXISTS idx_tracking_entries_user_id_timestamp ON public.tracking_entries(user_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_tracking_entries_tool_id ON public.tracking_entries(tool_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_entries_user_tool_timestamp ON public.tracking_entries(user_id, tool_id, timestamp);
+
+-- Health insights table for storing AI-generated insights
+CREATE TABLE IF NOT EXISTS public.health_insights (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    insight_type TEXT NOT NULL CHECK (insight_type IN ('daily', 'weekly', 'monthly', 'triggered', 'on_demand')),
+    insights JSONB NOT NULL DEFAULT '{}',
+    alerts JSONB DEFAULT '[]',
+    metadata JSONB DEFAULT '{}',
+    generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Health scores table for wellness index tracking
+CREATE TABLE IF NOT EXISTS public.health_scores (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    overall_score NUMERIC(5,2) NOT NULL CHECK (overall_score >= 0 AND overall_score <= 100),
+    component_scores JSONB NOT NULL DEFAULT '{}',
+    trend TEXT CHECK (trend IN ('improving', 'stable', 'declining', 'insufficient_data')),
+    score_period TEXT NOT NULL DEFAULT '7d',
+    calculated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User alerts table for notifications and warnings
+CREATE TABLE IF NOT EXISTS public.user_alerts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    alert_type TEXT NOT NULL,
+    severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'urgent', 'critical')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_required TEXT,
+    metadata JSONB DEFAULT '{}',
+    is_read BOOLEAN DEFAULT false,
+    is_dismissed BOOLEAN DEFAULT false,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Analytics cache table for performance optimization
+CREATE TABLE IF NOT EXISTS public.analytics_cache (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    cache_key TEXT NOT NULL,
+    cache_data JSONB NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add indexes for analytics tables
+CREATE INDEX IF NOT EXISTS idx_health_insights_user_type ON public.health_insights(user_id, insight_type);
+CREATE INDEX IF NOT EXISTS idx_health_insights_generated_at ON public.health_insights(generated_at);
+CREATE INDEX IF NOT EXISTS idx_health_scores_user_calculated ON public.health_scores(user_id, calculated_at);
+CREATE INDEX IF NOT EXISTS idx_user_alerts_user_severity ON public.user_alerts(user_id, severity, is_read);
+CREATE INDEX IF NOT EXISTS idx_analytics_cache_user_key ON public.analytics_cache(user_id, cache_key);
+CREATE INDEX IF NOT EXISTS idx_analytics_cache_expires ON public.analytics_cache(expires_at);
+
+-- Enable Row Level Security for analytics tables
+ALTER TABLE public.health_insights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.health_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.analytics_cache ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for analytics tables
+CREATE POLICY "Users can manage own health insights" ON public.health_insights
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own health scores" ON public.health_scores
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own alerts" ON public.user_alerts
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own analytics cache" ON public.analytics_cache
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Add triggers for updated_at columns
+CREATE TRIGGER update_health_insights_updated_at BEFORE UPDATE ON public.health_insights
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create function for cleaning up expired cache entries
+CREATE OR REPLACE FUNCTION cleanup_expired_cache()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM public.analytics_cache WHERE expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql; 

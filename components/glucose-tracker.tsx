@@ -154,32 +154,32 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
     
-    const recentEntries = recentEntries.filter(entry => 
+    const filteredEntries = recentEntries.filter(entry => 
       new Date(entry.timestamp) >= cutoffDate
     )
     
-    if (recentEntries.length === 0) return 0
+    if (filteredEntries.length === 0) return 0
     
-    const total = recentEntries.reduce((sum, entry) => sum + entry.data.glucose_level, 0)
-    return Math.round(total / recentEntries.length)
+    const total = filteredEntries.reduce((sum, entry) => sum + entry.data.glucose_level, 0)
+    return Math.round(total / filteredEntries.length)
   }
 
   const getInRangePercentage = (days: number = 7) => {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
     
-    const recentEntries = recentEntries.filter(entry => 
+    const filteredEntries = recentEntries.filter(entry => 
       new Date(entry.timestamp) >= cutoffDate
     )
     
-    if (recentEntries.length === 0) return 0
+    if (filteredEntries.length === 0) return 0
     
-    const inRange = recentEntries.filter(entry => {
+    const inRange = filteredEntries.filter(entry => {
       const status = getGlucoseStatus(entry.data.glucose_level, entry.data.timing)
       return status.status === 'normal'
     }).length
     
-    return Math.round((inRange / recentEntries.length) * 100)
+    return Math.round((inRange / filteredEntries.length) * 100)
   }
 
   return (

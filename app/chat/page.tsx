@@ -147,10 +147,13 @@ export default function ChatAssistant() {
 
   const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean, sessionId?: string}> => {
     try {
-      // Create user context with health conditions
+      // Create enhanced user context with health conditions and user ID
       const userContext = {
+        userId: user?.id, // Add user ID for health analytics context
         healthConditions: conditions.map(c => c.name)
       };
+
+      console.log('Sending user context to chat API:', { userId: user?.id, conditionsCount: conditions.length });
 
       // Call our LLM API with session management
       const response = await fetch('/api/ask', {
@@ -540,6 +543,14 @@ export default function ChatAssistant() {
                 <span>{action.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Medical Disclaimer */}
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-center text-xs text-gray-500 gap-1">
+            <AlertCircle className="w-3 h-3" />
+            <span>For informational purposes only. Always consult healthcare professionals for medical advice.</span>
           </div>
         </div>
 

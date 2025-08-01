@@ -142,11 +142,12 @@ export function SymptomTracker({ onClose, toolId, userTool, onEntry }: SymptomTr
           return
         }
 
-                 await DatabaseService.createTrackingEntry(user.id, {
-           tool_id: toolId,
-           data: symptomEntry,
-           timestamp: symptomEntry.timestamp
-         })
+                 await DatabaseService.createTrackingEntry({
+          user_id: user.id,
+          tool_id: toolId,
+          data: symptomEntry,
+          timestamp: symptomEntry.timestamp
+        })
         
         // Call onEntry callback
         onEntry({

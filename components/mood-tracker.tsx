@@ -104,11 +104,12 @@ export function MoodTracker({ onClose, toolId, userTool, onEntry }: MoodTrackerP
           return
         }
 
-                 await DatabaseService.createTrackingEntry(user.id, {
-           tool_id: toolId,
-           data: moodEntry,
-           timestamp: moodEntry.timestamp
-         })
+                 await DatabaseService.createTrackingEntry({
+          user_id: user.id,
+          tool_id: toolId,
+          data: moodEntry,
+          timestamp: moodEntry.timestamp
+        })
         
         // Call onEntry callback
         onEntry({

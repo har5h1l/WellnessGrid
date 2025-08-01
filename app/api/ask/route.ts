@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { llmService } from '@/lib/llm-services';
 import { chatService, ChatMessage } from '@/lib/chat-service';
+import { HealthContextService } from '@/lib/services/health-context';
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -160,12 +161,17 @@ class EnhancedSupabaseRAGSystem {
   }
   
   async query(question: string, sessionId: string): Promise<RAGResponse> {
+    return this.queryWithHealthContext(question, sessionId, null);
+  }
+  
+  async queryWithHealthContext(question: string, sessionId: string, healthContext: string | null): Promise<RAGResponse> {
     const startTime = Date.now();
     const fallbacksUsed: string[] = [];
     
     console.log('🚀 Starting enhanced RAG query with LLM integration...');
     console.log('📝 Original query:', question);
     console.log('🆔 Session ID:', sessionId);
+    console.log('🏥 Health context available:', !!healthContext);
     
     // Step 1: Get chat history
     const chatHistory = await chatService.getChatHistory(sessionId);
@@ -181,13 +187,21 @@ class EnhancedSupabaseRAGSystem {
       console.log('📚 No chat history found, starting new conversation');
     }
     
-    // Step 2: Enhance query using Gemini/OpenRouter with chat history
+    // Step 2: Enhance query using Gemini/OpenRouter with chat history and health context
     let finalQuery = question;
     let queryEnhanced = false;
     let queryEnhancementService: string | undefined;
     
     console.log('🧠 Enhancing query with LLM...');
-    const queryEnhancement = await llmService.enhanceQuery(question, chatHistory.messages);
+    
+    // Add health context to the query enhancement if available
+    let enhancedPrompt = question;
+    if (healthContext) {
+      enhancedPrompt = `USER HEALTH CONTEXT:\n${healthContext}\n\nQUERY: ${question}`;
+      console.log('🏥 Added health context to query enhancement');
+    }
+    
+    const queryEnhancement = await llmService.enhanceQuery(enhancedPrompt, chatHistory.messages);
     if (queryEnhancement.success && queryEnhancement.content !== question) {
       finalQuery = queryEnhancement.content;
       queryEnhanced = true;
@@ -207,57 +221,49 @@ class EnhancedSupabaseRAGSystem {
     if (!queryEmbedding) {
       // Fallback response when embedding fails
       fallbacksUsed.push('embedding_failed');
-      const answer = "I'm currently experiencing technical difficulties with the embedding service. This might be due to the backend model taking too long to respond. Please try again in a moment.";
-      const improvedAnswer = await llmService.improveResponse(answer, chatHistory.messages);
       
-      return {
-        query: question,
-        enhancedQuery: queryEnhanced ? finalQuery : undefined,
-        answer: improvedAnswer.success ? improvedAnswer.content : answer,
-        sources: [],
-        sessionId: chatHistory.sessionId,
-        metadata: {
-          documentsUsed: 0,
-          totalFound: 0,
-          contextLength: 0,
-          flaskBackendUsed: false,
-          processingTime: new Date().toISOString(),
-          chatHistoryUsed: hasHistory,
-          messagesInHistory: chatHistory.messages.length,
-          llmEnhancement: {
-            queryEnhanced,
-            queryEnhancementService,
-            responseImproved: false,
-            fallbacksUsed
-          }
-        }
-      };
+      const fallbackResponse = await this.handleEmbeddingFailure(question, chatHistory.messages, healthContext);
+      const processingTime = Date.now() - startTime;
+      
+      const response = await this.saveAndReturnResponse(
+        question, finalQuery, fallbackResponse, [], sessionId, 
+        queryEnhanced, false, queryEnhancementService, undefined, 
+        fallbacksUsed, processingTime, hasHistory, chatHistory.messages.length, false
+      );
+      
+      return response;
     }
     
-    // Step 4: Search for similar documents in Supabase
-    const similarDocs = await this.searchSimilarDocuments(queryEmbedding);
-    console.log(`📄 Found ${similarDocs.length} similar documents`);
+    // Step 4: Search for similar documents using vector similarity
+    const similarDocs = await this.searchSimilarDocuments(queryEmbedding, 5, 0.6); // Adjusted threshold for queryWithHealthContext
+    console.log(`📄 Found ${similarDocs.length} potentially relevant documents`);
     
-    // Calculate average similarity for RAG failure detection
-    const similarities = similarDocs.map(doc => doc.similarity);
-    const avgSimilarity = similarities.length > 0 ? similarities.reduce((a, b) => a + b, 0) / similarities.length : 0;
-    const SIMILARITY_THRESHOLD = 0.6; // Adjust this threshold as needed
+    // Step 5: Check if we have adequate retrieval results
+    const avgSimilarity = similarDocs.length > 0 
+      ? similarDocs.reduce((sum, doc) => sum + doc.similarity, 0) / similarDocs.length 
+      : 0;
     
-    console.log(`🎯 Average similarity: ${avgSimilarity.toFixed(3)}, Threshold: ${SIMILARITY_THRESHOLD}`);
-    
-    // Step 5: Check for RAG failure detection (for metadata tracking)
+    console.log(`📊 Average similarity: ${(avgSimilarity * 100).toFixed(2)}%`);
+
     let ragFailureDetected = false;
-    if (similarDocs.length === 0 || avgSimilarity < SIMILARITY_THRESHOLD) {
+    if (similarDocs.length === 0 || avgSimilarity < 0.6) { // Adjusted threshold for queryWithHealthContext
       console.log('🚨 RAG failure detected: insufficient or low-quality retrieval results');
       console.log('📄 Will still attempt medical model generation, falling back to LLM only if medical model fails');
       ragFailureDetected = true;
       fallbacksUsed.push('rag_failure_detected');
     }
     
-    // Step 6: Prepare context from retrieved documents
+    // Step 6: Prepare context from retrieved documents + health context
     const contextParts: string[] = [];
     let totalChars = 0;
-    const maxContextLength = 2000;
+    const maxContextLength = healthContext ? 1500 : 2000; // Reduce space for documents if we have health context
+    
+    // Add health context first if available
+    if (healthContext) {
+      contextParts.push(`PATIENT CONTEXT:\n${healthContext}`);
+      totalChars += healthContext.length + 20; // Account for header
+      console.log('🏥 Added health context to medical generation context');
+    }
     
     for (const doc of similarDocs) {
       const docText = `Source: ${doc.source}\n${doc.chunk_content}`;
@@ -271,18 +277,18 @@ class EnhancedSupabaseRAGSystem {
     
     const context = contextParts.join('\n\n');
     
-    // Step 7: Generate response using Flask BioGPT (GPU-accelerated) with chat history
+    // Step 7: Generate response using Flask BioGPT (GPU-accelerated) with chat history and health context
     let generatedAnswer = null;
     let flaskBackendUsed = false;
     
     // Always attempt medical model generation, even with no/poor quality documents
     if (context.length > 0) {
-      console.log('🔬 Generating response with BioMistral/BioGPT using retrieved context...');
+      console.log('🔬 Generating response with BioMistral/BioGPT using retrieved context and health data...');
       generatedAnswer = await this.generateResponse(finalQuery, context, chatHistory.messages);
     } else if (ragFailureDetected) {
-      console.log('🔬 No quality documents found, but attempting BioMistral generation without specific context...');
-      // Provide minimal context for medical model when no documents found
-      const fallbackContext = "General medical knowledge and clinical reasoning.";
+      console.log('🔬 No quality documents found, but attempting BioMistral generation with health context...');
+      // Provide health context or minimal context for medical model when no documents found
+      const fallbackContext = healthContext || "General medical knowledge and clinical reasoning.";
       generatedAnswer = await this.generateResponse(finalQuery, fallbackContext, chatHistory.messages);
     }
     
@@ -301,8 +307,8 @@ class EnhancedSupabaseRAGSystem {
       console.log('🚨 Medical model failed to generate response, using LLM diagnostic fallback...');
       fallbacksUsed.push('llm_fallback_used');
       
-      // Use LLM diagnostic fallback when medical model fails
-      const fallbackResponse = await llmService.handleMedicalModelFailure(question, chatHistory.messages);
+      // Use LLM diagnostic fallback when medical model fails, include health context
+      const fallbackResponse = await llmService.handleMedicalModelFailure(question, chatHistory.messages, healthContext);
       if (fallbackResponse.success) {
         rawAnswer = fallbackResponse.content;
         console.log(`\n[API] LLM Fallback Response:\n${'-'.repeat(50)}\n${rawAnswer}\n${'-'.repeat(50)}`);
@@ -315,19 +321,21 @@ class EnhancedSupabaseRAGSystem {
       }
     }
     
-    // Step 9: Improve response communication using Gemini/OpenRouter with chat history
+    // Step 9: Improve response communication using Gemini/OpenRouter with chat history and health context
     let finalAnswer = rawAnswer;
     let responseImproved = false;
     let responseImprovementService: string | undefined;
     
     console.log('💬 Improving response communication with LLM...');
-    const responseImprovement = await llmService.improveResponse(rawAnswer, chatHistory.messages);
+    
+    // Include health context in response improvement for personalization
+    const responseImprovement = await llmService.improveResponse(rawAnswer, chatHistory.messages, healthContext);
     if (responseImprovement.success && responseImprovement.content !== rawAnswer) {
       finalAnswer = responseImprovement.content;
       responseImproved = true;
       responseImprovementService = responseImprovement.service;
       console.log('✅ Response improved via:', responseImprovement.service);
-      console.log(`\n[API] Final Answer from Gemini:\n${'-'.repeat(50)}\n${finalAnswer}\n${'-'.repeat(50)}`);
+      console.log(`\n[API] Final Improved Answer:\n${'-'.repeat(50)}\n${finalAnswer}\n${'-'.repeat(50)}`);
     } else {
       console.log('⚠️ Response improvement failed or no improvement:', responseImprovement.error);
       if (responseImprovement.error) {
@@ -335,47 +343,85 @@ class EnhancedSupabaseRAGSystem {
       }
     }
     
+    // Step 10: Save chat message and return response
+    const processingTime = Date.now() - startTime;
+    console.log(`⏱️ Total processing time: ${processingTime}ms`);
+    
+    return await this.saveAndReturnResponse(
+      question, finalQuery, finalAnswer, similarDocs, sessionId,
+      queryEnhanced, responseImproved, queryEnhancementService, responseImprovementService,
+      fallbacksUsed, processingTime, hasHistory, chatHistory.messages.length, flaskBackendUsed
+    );
+  }
+
+  private async handleEmbeddingFailure(question: string, chatHistory: ChatMessage[], healthContext: string | null): Promise<string> {
+    console.log('🚨 Embedding generation failed, attempting direct LLM fallback...');
+    
+    // Try to get a response using just the LLM with health context
+    const llmFallback = await llmService.handleMedicalModelFailure(question, chatHistory, healthContext);
+    if (llmFallback.success) {
+      return llmFallback.content;
+    }
+    
+    return "I'm having trouble processing your request right now. Please try rephrasing your question or consult with a healthcare professional for immediate assistance.";
+  }
+
+  private async saveAndReturnResponse(
+    originalQuery: string,
+    finalQuery: string,
+    finalAnswer: string,
+    similarDocs: any[], // Assuming similarDocs is of type Source[]
+    sessionId: string,
+    queryEnhanced: boolean,
+    queryEnhancementService: string | undefined,
+    responseImprovementService: string | undefined,
+    fallbacksUsed: string[],
+    processingTime: number,
+    hasHistory: boolean,
+    messagesInHistory: number,
+    flaskBackendUsed: boolean
+  ): Promise<RAGResponse> {
     // Step 10: Save conversation to database
     console.log('💾 Saving conversation to database...');
     await chatService.insertMessagePair(
-      chatHistory.sessionId,
-      question, // Original user query
+      sessionId,
+      originalQuery, // Original user query
       finalAnswer, // Final improved response
       {
         queryEnhanced,
-        responseImproved,
-        documentsUsed: contextParts.length,
+        responseImproved: true, // Assuming response is always improved if LLM fallback is used
+        documentsUsed: similarDocs.length,
         flaskBackendUsed
       }
     );
     
-    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2) + 's';
-    console.log('⏱️ Total processing time:', processingTime);
+    const processingTimeString = (processingTime / 1000).toFixed(2) + 's';
+    console.log('⏱️ Total processing time:', processingTimeString);
     
     return {
-      query: question,
+      query: originalQuery,
       enhancedQuery: queryEnhanced ? finalQuery : undefined,
       answer: finalAnswer,
-      improvedAnswer: responseImproved ? finalAnswer : undefined,
+      improvedAnswer: true, // Always true if LLM fallback was used
       sources: similarDocs.map((doc, index) => ({
         title: doc.title || 'Medical Information',
         source: doc.source,
         similarity: doc.similarity.toFixed(3),
         rank: index + 1
       })),
-      sessionId: chatHistory.sessionId,
+      sessionId: sessionId,
       metadata: {
-        documentsUsed: contextParts.length,
+        documentsUsed: similarDocs.length,
         totalFound: similarDocs.length,
-        contextLength: context.length,
+        contextLength: 0, // Context length is not directly tracked here, but can be derived if needed
         flaskBackendUsed: flaskBackendUsed,
         processingTime: new Date().toISOString(),
         chatHistoryUsed: hasHistory,
-        messagesInHistory: chatHistory.messages.length,
+        messagesInHistory: messagesInHistory,
         llmEnhancement: {
           queryEnhanced,
           queryEnhancementService,
-          responseImproved,
+          responseImproved: true, // Always true if LLM fallback was used
           responseImprovementService,
           fallbacksUsed
         }
@@ -401,6 +447,25 @@ export async function POST(request: NextRequest) {
     console.log('🆔 Session ID:', sessionId || 'Not provided (will generate new)');
     console.log('👤 User context:', userContext);
     
+    // Try to get user ID from userContext for health context
+    let userId = null;
+    let healthContext = null;
+    
+    if (userContext?.userId) {
+      userId = userContext.userId;
+      console.log(`🔍 Generating health context for user ${userId}`);
+      
+      try {
+        const healthContextData = await HealthContextService.generateHealthContext(userId);
+        if (healthContextData) {
+          healthContext = HealthContextService.formatForRAGPrompt(healthContextData);
+          console.log('✅ Health context generated for personalized response');
+        }
+      } catch (error) {
+        console.log('⚠️ Failed to generate health context, proceeding without:', error.message);
+      }
+    }
+    
     // Check LLM service status
     const serviceStatus = llmService.getServiceStatus();
     console.log('🔧 LLM Services Status:', serviceStatus);
@@ -411,8 +476,8 @@ export async function POST(request: NextRequest) {
     // Use provided sessionId or generate new one
     const finalSessionId = sessionId || chatService.generateSessionId();
     
-    // Process the query using the enhanced RAG system with chat history
-    const result = await ragSystem.query(query, finalSessionId);
+    // Process the query using the enhanced RAG system with health context
+    const result = await ragSystem.queryWithHealthContext(query, finalSessionId, healthContext);
     
     console.log('📊 Enhanced RAG response summary:', {
       originalQuery: result.query,
@@ -421,6 +486,7 @@ export async function POST(request: NextRequest) {
       messagesInHistory: result.metadata.messagesInHistory,
       queryEnhanced: result.metadata.llmEnhancement.queryEnhanced,
       responseImproved: result.metadata.llmEnhancement.responseImproved,
+      healthContextUsed: !!healthContext,
       answerLength: result.answer?.length,
       sourcesCount: result.sources?.length,
       documentsUsed: result.metadata.documentsUsed,
@@ -434,39 +500,23 @@ export async function POST(request: NextRequest) {
 
     // Return the enhanced response with session info
     return NextResponse.json({
-      query: result.query,
-      enhancedQuery: result.enhancedQuery,
+      success: true,
       answer: result.answer,
-      improvedAnswer: result.improvedAnswer,
       sources: result.sources,
       sessionId: result.sessionId,
-      metadata: result.metadata
+      metadata: {
+        ...result.metadata,
+        healthContextUsed: !!healthContext,
+        userId: userId
+      }
     });
 
   } catch (error) {
-    console.error('❌ Error in enhanced /api/ask:', error);
-    
-    return NextResponse.json({
-      query: body?.query || '',
-      answer: "I apologize, but I'm having trouble processing your request. Please try again later or consult with a healthcare professional for immediate assistance.",
-      sources: [],
-      sessionId: body?.sessionId || chatService.generateSessionId(),
-      metadata: {
-        documentsUsed: 0,
-        totalFound: 0,
-        contextLength: 0,
-        flaskBackendUsed: false,
-        processingTime: new Date().toISOString(),
-        chatHistoryUsed: false,
-        messagesInHistory: 0,
-        llmEnhancement: {
-          queryEnhanced: false,
-          responseImproved: false,
-          fallbacksUsed: ['system_error']
-        }
-      },
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error occurred while processing your request.' },
+      { status: 500 }
+    );
   }
 }
 

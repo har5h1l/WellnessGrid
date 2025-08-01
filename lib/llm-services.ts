@@ -73,12 +73,12 @@ Guidelines:
 2. Maintain all medical accuracy - do not change medical facts
 3. Add empathetic and supportive tone
 4. Structure information clearly with bullet points or numbered lists when helpful
-5. Include appropriate disclaimers about consulting healthcare professionals
+5. Recommend seeking professional medical care when appropriate
 6. If there are technical terms, provide brief explanations
 7. Make the response actionable when possible
 8. Keep the response informative but not overwhelming
 
-If the response is overly generic or suggests "see a doctor" without insight, regenerate a useful and medically responsible answer with 2-3 plausible causes, self-care tips, warning signs, and disclaimer.
+If the response is overly generic or suggests "see a doctor" without insight, regenerate a useful and medically responsible answer with 2-3 plausible causes, self-care tips, and warning signs.
 
 Original medical response: "{originalResponse}"
 
@@ -92,7 +92,7 @@ Guidelines:
 2. Maintain all medical accuracy - do not change medical facts
 3. Add empathetic and supportive tone
 4. Structure information clearly with bullet points or numbered lists when helpful
-5. Include appropriate disclaimers about consulting healthcare professionals
+5. Recommend seeking professional medical care when appropriate
 6. If there are technical terms, provide brief explanations
 7. Make the response actionable when possible
 8. Keep the response informative but not overwhelming
@@ -347,7 +347,7 @@ export class LLMService {
   /**
    * Enhance user query for better medical AI processing
    */
-  async enhanceQuery(originalQuery: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
+  async enhanceQuery(originalQuery: string, chatHistory: ChatMessage[] = [], healthContext?: string): Promise<LLMResponse> {
     // Choose template and method based on whether we have chat history
     if (chatHistory.length > 0) {
       console.log(`🧠 Enhancing query with chat history (${chatHistory.length} messages)`);
@@ -359,7 +359,14 @@ export class LLMService {
       }));
       
       // Add the enhancement prompt as the final message
-      const enhancementPrompt = PROMPT_ENHANCEMENT_WITH_HISTORY_TEMPLATE.replace('{originalQuery}', originalQuery);
+      let enhancementPrompt = PROMPT_ENHANCEMENT_WITH_HISTORY_TEMPLATE.replace('{originalQuery}', originalQuery);
+      
+      // Add health context if available
+      if (healthContext) {
+        enhancementPrompt = `PATIENT HEALTH CONTEXT:\n${healthContext}\n\n${enhancementPrompt}`;
+        console.log('🏥 Added health context to query enhancement');
+      }
+      
       geminiMessages.push({
         role: 'user',
         parts: [{ text: enhancementPrompt }]
@@ -390,7 +397,14 @@ export class LLMService {
       }
     } else {
       // No history - use simple prompt
-      const prompt = PROMPT_ENHANCEMENT_TEMPLATE.replace('{originalQuery}', originalQuery);
+      let prompt = PROMPT_ENHANCEMENT_TEMPLATE.replace('{originalQuery}', originalQuery);
+      
+      // Add health context if available
+      if (healthContext) {
+        prompt = `PATIENT HEALTH CONTEXT:\n${healthContext}\n\n${prompt}`;
+        console.log('🏥 Added health context to simple query enhancement');
+      }
+      
       console.log(`\n[LLM Service] Prompt for Query Enhancement:\n${'-'.repeat(50)}\n${prompt}\n${'-'.repeat(50)}`);
       
       // Try Gemini first
@@ -419,7 +433,7 @@ export class LLMService {
   /**
    * Improve medical response communication for users
    */
-  async improveResponse(originalResponse: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
+  async improveResponse(originalResponse: string, chatHistory: ChatMessage[] = [], healthContext?: string): Promise<LLMResponse> {
     // Choose template and method based on whether we have chat history
     if (chatHistory.length > 0) {
       console.log(`💬 Improving response with chat history (${chatHistory.length} messages)`);
@@ -431,7 +445,14 @@ export class LLMService {
       }));
       
       // Add the improvement prompt as the final message
-      const improvementPrompt = RESPONSE_COMMUNICATION_WITH_HISTORY_TEMPLATE.replace('{originalResponse}', originalResponse);
+      let improvementPrompt = RESPONSE_COMMUNICATION_WITH_HISTORY_TEMPLATE.replace('{originalResponse}', originalResponse);
+      
+      // Add health context if available for personalization
+      if (healthContext) {
+        improvementPrompt = `PATIENT HEALTH CONTEXT:\n${healthContext}\n\n${improvementPrompt}`;
+        console.log('🏥 Added health context to response improvement');
+      }
+      
       geminiMessages.push({
         role: 'user',
         parts: [{ text: improvementPrompt }]
@@ -462,7 +483,14 @@ export class LLMService {
       }
     } else {
       // No history - use simple prompt
-      const prompt = RESPONSE_COMMUNICATION_TEMPLATE.replace('{originalResponse}', originalResponse);
+      let prompt = RESPONSE_COMMUNICATION_TEMPLATE.replace('{originalResponse}', originalResponse);
+      
+      // Add health context if available for personalization
+      if (healthContext) {
+        prompt = `PATIENT HEALTH CONTEXT:\n${healthContext}\n\n${prompt}`;
+        console.log('🏥 Added health context to simple response improvement');
+      }
+      
       console.log(`\n[LLM Service] Prompt for Response Improvement:\n${'-'.repeat(50)}\n${prompt}\n${'-'.repeat(50)}`);
       
       // Try Gemini first
@@ -493,7 +521,7 @@ export class LLMService {
    * This is used when the medical model fails to generate a response,
    * providing general medical guidance without specific RAG documents
    */
-  async handleMedicalModelFailure(originalUserQuery: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
+  async handleMedicalModelFailure(originalUserQuery: string, chatHistory: ChatMessage[] = [], healthContext?: string): Promise<LLMResponse> {
     console.log('🚨 Medical model failure detected, using general medical knowledge fallback...');
     
     // Choose method based on whether we have chat history
@@ -507,7 +535,7 @@ export class LLMService {
       }));
       
       // Add context about the conversation and the current query
-      const contextualPrompt = `
+      let contextualPrompt = `
 You are a medical assistant providing guidance when the specialized medical model is unavailable. The user has been having a conversation with our medical AI system, and now has asked a question that our medical model could not process or respond to.
 
 Your role:
@@ -530,6 +558,12 @@ Guidelines:
 Based on the conversation history above, provide guidance for this user query: "${originalUserQuery}"
 
 Helpful response:`;
+
+      // Add health context if available
+      if (healthContext) {
+        contextualPrompt = `PATIENT HEALTH CONTEXT:\n${healthContext}\n\n${contextualPrompt}`;
+        console.log('🏥 Added health context to medical model fallback');
+      }
       
       geminiMessages.push({
         role: 'user',
@@ -599,9 +633,7 @@ Helpful response:`;
 • Symptoms are severe or worsening
 • You experience concerning warning signs
 • Symptoms persist beyond a reasonable time
-• You have underlying health conditions
-
-**Important:** This information is not a substitute for professional medical care. Please consult with a healthcare provider for proper evaluation and treatment.`,
+• You have underlying health conditions`,
       service: 'none',
       error: 'Both LLM services failed, using hardcoded fallback'
     };

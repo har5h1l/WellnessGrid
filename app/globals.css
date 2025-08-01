@@ -70,8 +70,9 @@
 }
 
 .wellness-button-primary {
-  @apply bg-red-500 hover:bg-red-600 text-white font-medium rounded-full transition-colors;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+  @apply bg-red-600 hover:bg-red-700 text-white font-medium rounded-full transition-colors;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  /* WCAG AA compliant: red-600 (#dc2626) provides 4.54:1 contrast ratio with white text */
 }
 
 .wellness-button-secondary {
