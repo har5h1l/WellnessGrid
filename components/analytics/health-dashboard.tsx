@@ -167,15 +167,28 @@ export const HealthDashboard = memo(function HealthDashboard({ userId, className
       }
       
       const result = await response.json()
-      if (analyticsData && result.insights) {
-        const updatedData = {
-          ...analyticsData,
-          insights: [result.insights, ...(analyticsData.insights || [])]
+      console.log('🧠 Insights generation result:', result)
+      
+      if (result.success && result.insights) {
+        if (analyticsData) {
+          const updatedData = {
+            ...analyticsData,
+            insights: [result.insights, ...(analyticsData.insights || [])]
+          }
+          setAnalyticsData(updatedData)
+          console.log('✅ Insights added to analytics data:', result.insights)
+          // Switch to insights tab after a brief delay to ensure state update
+          setTimeout(() => setActiveTab('insights'), 100)
+        } else {
+          // If no analytics data yet, reload everything
+          console.log('🔄 No analytics data, reloading with insights')
+          await loadAnalytics(true)
+          setTimeout(() => setActiveTab('insights'), 100)
         }
-        setAnalyticsData(updatedData)
-        setActiveTab('insights') // Switch to insights tab
+      } else {
+        console.log('❌ No insights in response, reloading analytics')
+        await loadAnalytics(true) // Reload analytics to get fresh insights  
       }
-      await loadAnalytics(true) // Reload analytics to get fresh insights
     } catch (err) {
       console.error('Insights generation error:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate insights')
@@ -878,33 +891,50 @@ function InsightsSection({ insights, onRefresh }: { insights: any[], onRefresh: 
       )}
 
       {/* Trends */}
-      {latestInsight.insights.trends && latestInsight.insights.trends.length > 0 && (
+      {latestInsight.insights.trends && (
         <Card>
           <CardHeader>
             <CardTitle>Health Trends</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {latestInsight.insights.trends.map((trend: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {trend.direction === 'improving' ? (
+              {/* Handle both array format (mock) and object format (database) */}
+              {Array.isArray(latestInsight.insights.trends) ? (
+                // Array format from mock data
+                latestInsight.insights.trends.map((trend: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {trend.direction === 'improving' ? (
+                        <TrendingUp className="h-5 w-5 text-green-500" />
+                      ) : trend.direction === 'declining' ? (
+                        <TrendingDown className="h-5 w-5 text-red-500" />
+                      ) : (
+                        <Minus className="h-5 w-5 text-gray-500" />
+                      )}
+                      <div>
+                        <h4 className="font-medium capitalize">{trend.metric.replace(/_/g, ' ')}</h4>
+                        <p className="text-sm text-muted-foreground">{trend.description}</p>
+                      </div>
+                    </div>
+                    <Badge variant={trend.direction === 'improving' ? 'default' : 'secondary'}>
+                      {Math.round(trend.confidence * 100)}% confidence
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                // Object format from database
+                Object.entries(latestInsight.insights.trends).map(([metric, description]: [string, any], index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
                       <TrendingUp className="h-5 w-5 text-green-500" />
-                    ) : trend.direction === 'declining' ? (
-                      <TrendingDown className="h-5 w-5 text-red-500" />
-                    ) : (
-                      <Minus className="h-5 w-5 text-gray-500" />
-                    )}
-                    <div>
-                      <h4 className="font-medium capitalize">{trend.metric.replace(/_/g, ' ')}</h4>
-                      <p className="text-sm text-muted-foreground">{trend.description}</p>
+                      <div>
+                        <h4 className="font-medium capitalize">{metric.replace(/_/g, ' ')}</h4>
+                        <p className="text-sm text-muted-foreground">{description}</p>
+                      </div>
                     </div>
                   </div>
-                  <Badge variant={trend.direction === 'improving' ? 'default' : 'secondary'}>
-                    {Math.round(trend.confidence * 100)}% confidence
-                  </Badge>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -920,14 +950,25 @@ function InsightsSection({ insights, onRefresh }: { insights: any[], onRefresh: 
             <div className="space-y-4">
               {latestInsight.insights.recommendations.map((rec: any, index: number) => (
                 <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium capitalize">{rec.category}</h4>
-                    <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'}>
-                      {rec.priority} priority
-                    </Badge>
-                  </div>
-                  <p className="text-sm mb-2">{rec.action}</p>
-                  <p className="text-xs text-muted-foreground">{rec.rationale}</p>
+                  {typeof rec === 'string' ? (
+                    // String format from database
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <p className="text-sm">{rec}</p>
+                    </div>
+                  ) : (
+                    // Object format from mock data
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium capitalize">{rec.category}</h4>
+                        <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'}>
+                          {rec.priority} priority
+                        </Badge>
+                      </div>
+                      <p className="text-sm mb-2">{rec.action}</p>
+                      <p className="text-xs text-muted-foreground">{rec.rationale}</p>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -968,12 +1009,23 @@ function InsightsSection({ insights, onRefresh }: { insights: any[], onRefresh: 
               {latestInsight.insights.correlations.map((corr: any, index: number) => (
                 <div key={index} className="p-4 border rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={corr.strength === 'strong' ? 'default' : 'secondary'}>
-                      {corr.strength} correlation
+                    <Badge variant={
+                      (corr.strength === 'strong' || Math.abs(corr.correlation || 0) > 0.6) ? 'default' : 'secondary'
+                    }>
+                      {corr.strength || (Math.abs(corr.correlation || 0) > 0.6 ? 'strong' : 'moderate')} correlation
                     </Badge>
+                    {corr.correlation && (
+                      <span className="text-xs text-muted-foreground">
+                        r = {corr.correlation.toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm mb-2">{corr.finding}</p>
-                  <p className="text-xs text-muted-foreground font-medium">💡 {corr.actionable}</p>
+                  <p className="text-sm mb-2">
+                    {corr.finding || `${corr.factor1?.replace(/_/g, ' ')} and ${corr.factor2?.replace(/_/g, ' ')} are correlated`}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    💡 {corr.actionable || corr.insight}
+                  </p>
                 </div>
               ))}
             </div>

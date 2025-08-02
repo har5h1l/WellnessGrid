@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { HealthAnalyticsService } from '@/lib/services/health-analytics'
+
+// Create a service role client for server-side operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +26,7 @@ export async function GET(request: NextRequest) {
       const authHeader = request.headers.get('authorization')
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7)
-        const { data: { user }, error } = await supabase.auth.getUser(token)
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
         if (user && !error) {
           userId = user.id
         }
@@ -32,7 +44,38 @@ export async function GET(request: NextRequest) {
         
         // Add insights if requested
         if (includeInsights && analyticsData.insights.length === 0) {
-          analyticsData.insights = [getMockInsight()]
+          try {
+            // Query existing insights from database with debugging using admin client
+            console.log(`🔍 GET: Querying insights for user: ${userId}`)
+            const { data: existingInsights, error: queryError } = await supabaseAdmin
+              .from('health_insights')
+              .select('*')
+              .eq('user_id', userId)
+              .order('generated_at', { ascending: false })
+              .limit(3)
+            
+            console.log('📊 GET Query result:', { 
+              error: queryError, 
+              insightsCount: existingInsights?.length || 0,
+              insights: existingInsights?.map(i => ({ id: i.id, type: i.insight_type, summary: i.insights?.summary }))
+            })
+            
+            if (!queryError && existingInsights && existingInsights.length > 0) {
+              console.log(`✅ Found ${existingInsights.length} insights in database`)
+              analyticsData.insights = existingInsights.map(insight => ({
+                id: insight.id,
+                insight_type: insight.insight_type,
+                generated_at: insight.generated_at,
+                insights: insight.insights
+              }))
+            } else {
+              console.log('💭 No insights found in database, using mock insight')
+              analyticsData.insights = [getMockInsight()]
+            }
+          } catch (insightError) {
+            console.log('Failed to get insights from database:', insightError.message)
+            analyticsData.insights = [getMockInsight()]
+          }
         }
         
         console.log('✅ Real analytics data generated successfully')
@@ -175,7 +218,64 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { insightType = 'on_demand' } = body
     
-    // Return comprehensive mock insights that match our frontend structure
+    // Get user ID from Authorization header
+    let userId = null
+    try {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (user && !error) {
+          userId = user.id
+        }
+      }
+    } catch (authError) {
+      console.log('Auth failed for insight generation:', authError.message)
+    }
+
+    // Try to get real insights from database first
+    if (userId) {
+      try {
+        console.log(`🧠 Getting insights for user ${userId}`)
+        
+        // Query existing insights from database with debugging using admin client
+        console.log(`🔍 Querying insights for user: ${userId}`)
+        const { data: existingInsights, error: queryError } = await supabaseAdmin
+          .from('health_insights')
+          .select('*')
+          .eq('user_id', userId)
+          .order('generated_at', { ascending: false })
+          .limit(1)
+        
+        console.log('📊 Query result:', { 
+          error: queryError, 
+          insightsCount: existingInsights?.length || 0,
+          firstInsight: existingInsights?.[0]?.id 
+        })
+        
+        if (!queryError && existingInsights && existingInsights.length > 0) {
+          console.log('✅ Found existing insights in database')
+          const insight = existingInsights[0]
+          return NextResponse.json({
+            success: true,
+            insights: {
+              id: insight.id,
+              insight_type: insight.insight_type,
+              generated_at: insight.generated_at,
+              insights: insight.insights
+            },
+            source: 'database',
+            timestamp: new Date().toISOString()
+          })
+        }
+        
+        console.log('💭 No existing insights found, using mock data for now')
+      } catch (error) {
+        console.log('Failed to get real insights, using mock data:', error.message)
+      }
+    }
+    
+    // Fall back to mock insights
     const mockInsights = getMockInsight()
     mockInsights.insight_type = insightType
     mockInsights.insights.summary = `Fresh AI analysis of your health data reveals ${insightType === 'on_demand' ? 'immediate' : 'recent'} patterns and opportunities for improvement.`
@@ -183,6 +283,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       insights: mockInsights,
+      source: 'mock',
       timestamp: new Date().toISOString()
     })
   } catch (error) {
