@@ -170,7 +170,7 @@ export class AlertService {
       // Get user data
       const [userProfile, userConditions, trackingData] = await Promise.all([
         DatabaseService.getUserProfile(userId),
-        DatabaseService.getUserConditions(userId),
+        DatabaseService.getUserHealthConditions(userId),
         DatabaseService.getTrackingEntries(userId, undefined, 100)
       ])
 

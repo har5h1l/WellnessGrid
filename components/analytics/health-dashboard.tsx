@@ -8,32 +8,23 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import dynamic from 'next/dynamic'
-import { Suspense, memo, useMemo, useCallback } from 'react'
+import { memo, useMemo, useCallback } from 'react'
 
-// Lazy load chart components for better performance
-const LazyLineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), {
-  loading: () => <ChartSkeleton />
-})
-const LazyLine = dynamic(() => import('recharts').then(mod => ({ default: mod.Line })), { ssr: false })
-const LazyXAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false })
-const LazyYAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false })
-const LazyCartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false })
-const LazyTooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false })
-const LazyResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), { ssr: false })
-const LazyBarChart = dynamic(() => import('recharts').then(mod => ({ default: mod.BarChart })), {
-  loading: () => <ChartSkeleton />
-})
-const LazyBar = dynamic(() => import('recharts').then(mod => ({ default: mod.Bar })), { ssr: false })
-const LazyScatterChart = dynamic(() => import('recharts').then(mod => ({ default: mod.ScatterChart })), {
-  loading: () => <ChartSkeleton />
-})
-const LazyScatter = dynamic(() => import('recharts').then(mod => ({ default: mod.Scatter })), { ssr: false })
-const LazyPieChart = dynamic(() => import('recharts').then(mod => ({ default: mod.PieChart })), {
-  loading: () => <ChartSkeleton />
-})
-const LazyPie = dynamic(() => import('recharts').then(mod => ({ default: mod.Pie })), { ssr: false })
-const LazyCell = dynamic(() => import('recharts').then(mod => ({ default: mod.Cell })), { ssr: false })
+// Direct imports for better reliability - no dynamic loading
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts'
 
 // Using local function definitions instead of separate files
 import { 
@@ -557,29 +548,27 @@ function InteractiveOverviewSection({ analyticsData }: { analyticsData: any }) {
           </CardHeader>
           <CardContent>
             <div className="h-64">
-              <Suspense fallback={<ChartSkeleton />}>
-                <LazyResponsiveContainer width="100%" height="100%">
-                  <LazyPieChart>
-                    <LazyPie
-                      data={healthScoreData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {healthScoreData.map((entry, index) => (
-                        <LazyCell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </LazyPie>
-                    <LazyTooltip 
-                      formatter={(value: any) => [`${value}%`, 'Score']}
-                      labelFormatter={(label) => `${label} Health`}
-                    />
-                  </LazyPieChart>
-                </LazyResponsiveContainer>
-              </Suspense>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={healthScoreData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {healthScoreData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: any) => [`${value}%`, 'Score']}
+                    labelFormatter={(label) => `${label} Health`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
             <div className="mt-4 text-center">
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -602,29 +591,27 @@ function InteractiveOverviewSection({ analyticsData }: { analyticsData: any }) {
           </CardHeader>
           <CardContent>
             <div className="h-64">
-              <Suspense fallback={<ChartSkeleton />}>
-                <LazyResponsiveContainer width="100%" height="100%">
-                  <LazyBarChart data={trendsChartData}>
-                    <LazyCartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                    <LazyXAxis dataKey="name" stroke="#6b7280" fontSize={12} />
-                    <LazyYAxis stroke="#6b7280" fontSize={12} />
-                    <LazyTooltip 
-                      formatter={(value: any, name: string, props: any) => [
-                        `${value}`, 
-                        `${props.payload.trend} (${props.payload.confidence}% confidence)`
-                      ]}
-                      labelFormatter={(label) => `${label} Trend`}
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid #374151',
-                        borderRadius: '8px',
-                        color: '#f9fafb'
-                      }}
-                    />
-                    <LazyBar dataKey="value" fill="#dc2626" radius={[4, 4, 0, 0]} />
-                  </LazyBarChart>
-                </LazyResponsiveContainer>
-              </Suspense>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trendsChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                  <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+                  <YAxis stroke="#6b7280" fontSize={12} />
+                  <Tooltip 
+                    formatter={(value: any, name: string, props: any) => [
+                      `${value}`, 
+                      `${props.payload.trend} (${props.payload.confidence}% confidence)`
+                    ]}
+                    labelFormatter={(label) => `${label} Trend`}
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#f9fafb'
+                    }}
+                  />
+                  <Bar dataKey="value" fill="#dc2626" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -640,29 +627,27 @@ function InteractiveOverviewSection({ analyticsData }: { analyticsData: any }) {
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <Suspense fallback={<ChartSkeleton />}>
-              <LazyResponsiveContainer width="100%" height="100%">
-                <LazyBarChart data={streakData} layout="horizontal">
-                  <LazyCartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                  <LazyXAxis type="number" stroke="#6b7280" fontSize={12} />
-                  <LazyYAxis dataKey="name" type="category" stroke="#6b7280" fontSize={12} width={80} />
-                  <LazyTooltip 
-                    formatter={(value: any, name: string) => [
-                      `${value} days`, 
-                      name === 'current' ? 'Current Streak' : 'Best Streak'
-                    ]}
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                      color: '#f9fafb'
-                    }}
-                  />
-                  <LazyBar dataKey="current" fill="#10b981" name="current" radius={[0, 4, 4, 0]} />
-                  <LazyBar dataKey="best" fill="#6b7280" name="best" radius={[0, 4, 4, 0]} opacity={0.3} />
-                </LazyBarChart>
-              </LazyResponsiveContainer>
-            </Suspense>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={streakData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                <XAxis type="number" stroke="#6b7280" fontSize={12} />
+                <YAxis dataKey="name" type="category" stroke="#6b7280" fontSize={12} width={80} />
+                <Tooltip 
+                  formatter={(value: any, name: string) => [
+                    `${value} days`, 
+                    name === 'current' ? 'Current Streak' : 'Best Streak'
+                  ]}
+                  contentStyle={{
+                    backgroundColor: '#1f2937',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#f9fafb'
+                  }}
+                />
+                <Bar dataKey="current" fill="#10b981" name="current" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="best" fill="#6b7280" name="best" radius={[0, 4, 4, 0]} opacity={0.3} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>

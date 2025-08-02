@@ -220,7 +220,7 @@ export class HealthInsightsService {
     // Get user data
     const [userProfile, userConditions, trackingData, previousInsights] = await Promise.all([
       DatabaseService.getUserProfile(userId),
-      DatabaseService.getUserConditions(userId),
+              DatabaseService.getUserHealthConditions(userId),
       this.getRecentTrackingData(userId, insightType),
       this.getPreviousInsights(userId, insightType)
     ])
@@ -370,9 +370,9 @@ IMPORTANT GUIDELINES:
 4. Prioritize safety - flag concerning patterns
 5. Provide specific, measurable recommendations
 6. Reference previous insights to show progress
-7. Return only valid JSON - no additional text
+7. CRITICAL: Return ONLY valid JSON with no additional text, explanations, or markdown formatting
 
-ANALYZE THE DATA AND PROVIDE INSIGHTS:
+ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
 `
   }
 
@@ -381,30 +381,107 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS:
    */
   private static parseInsightsResponse(response: LLMResponse): any {
     if (!response.success || !response.content) {
+      console.warn('LLM response unsuccessful or empty, using fallback')
       return this.getDefaultInsights()
     }
 
     try {
-      // Try to extract JSON from the response
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) {
-        console.warn('No JSON found in LLM response, using fallback')
-        return this.getDefaultInsights()
-      }
-
-      const parsedInsights = JSON.parse(jsonMatch[0])
+      // Multiple strategies to extract and parse JSON
       
-      // Validate required structure
-      if (!parsedInsights.trends || !parsedInsights.recommendations) {
-        console.warn('Invalid insights structure, using fallback')
-        return this.getDefaultInsights()
+      // Strategy 1: Look for complete JSON blocks with balanced braces
+      const jsonPatterns = [
+        /```json\s*(\{[\s\S]*?\})\s*```/g, // Markdown JSON blocks
+        /```\s*(\{[\s\S]*?\})\s*```/g,     // Markdown blocks without language
+        /(\{[\s\S]*?\})/g                   // Any JSON-like structure
+      ]
+      
+      let parsedInsights = null
+      
+      for (const pattern of jsonPatterns) {
+        const matches = [...response.content.matchAll(pattern)]
+        
+        for (const match of matches) {
+          const jsonCandidate = match[1] || match[0]
+          
+          try {
+            // Attempt to balance braces if needed
+            const balancedJson = this.balanceJsonBraces(jsonCandidate)
+            parsedInsights = JSON.parse(balancedJson)
+            
+            // Validate structure
+            if (this.validateInsightsStructure(parsedInsights)) {
+              console.log('✅ Successfully parsed LLM insights')
+              return parsedInsights
+            }
+          } catch (parseError) {
+            // Continue to next candidate
+            continue
+          }
+        }
       }
-
-      return parsedInsights
+      
+      // Strategy 2: Try to parse the entire response as JSON
+      try {
+        parsedInsights = JSON.parse(response.content)
+        if (this.validateInsightsStructure(parsedInsights)) {
+          return parsedInsights
+        }
+      } catch (directParseError) {
+        // Continue to fallback
+      }
+      
+      console.warn('No valid JSON found in LLM response, using fallback')
+      console.log('LLM Response preview:', response.content.substring(0, 200) + '...')
+      return this.getDefaultInsights()
+      
     } catch (error) {
       console.error('Error parsing insights response:', error)
+      console.log('Response content:', response.content?.substring(0, 500))
       return this.getDefaultInsights()
     }
+  }
+
+  /**
+   * Attempt to balance JSON braces for malformed JSON
+   */
+  private static balanceJsonBraces(jsonStr: string): string {
+    let openBraces = 0
+    let lastValidIndex = 0
+    
+    for (let i = 0; i < jsonStr.length; i++) {
+      if (jsonStr[i] === '{') {
+        openBraces++
+      } else if (jsonStr[i] === '}') {
+        openBraces--
+        if (openBraces === 0) {
+          lastValidIndex = i
+        }
+      }
+    }
+    
+    // If braces are balanced, return as is
+    if (openBraces === 0) {
+      return jsonStr
+    }
+    
+    // Try to cut at last valid closing brace
+    if (lastValidIndex > 0) {
+      return jsonStr.substring(0, lastValidIndex + 1)
+    }
+    
+    // Add missing closing braces
+    return jsonStr + '}'.repeat(openBraces)
+  }
+
+  /**
+   * Validate insights structure
+   */
+  private static validateInsightsStructure(insights: any): boolean {
+    return !!(
+      insights &&
+      typeof insights === 'object' &&
+      (insights.trends || insights.recommendations || insights.concerns || insights.summary)
+    )
   }
 
   /**

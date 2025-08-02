@@ -349,7 +349,20 @@ export function MoodTracker({ onClose, toolId, userTool, onEntry }: MoodTrackerP
                     <div className="flex justify-between">
                       <span className="text-gray-600">Mood:</span>
                       <span className="font-medium capitalize">
-                        {moodOptions.find(m => m.value === entry.data.mood)?.emoji} {entry.data.mood.replace('-', ' ')}
+                        {(() => {
+                          const moodValue = entry.data.mood
+                          // Handle numeric mood values (1-10 scale)
+                          if (typeof moodValue === 'number') {
+                            if (moodValue <= 2) return "😢 Very Sad"
+                            if (moodValue <= 4) return "😔 Sad" 
+                            if (moodValue <= 6) return "😐 Neutral"
+                            if (moodValue <= 8) return "😊 Happy"
+                            return "😄 Very Happy"
+                          }
+                          // Handle string mood values
+                          const option = moodOptions.find(m => m.value === moodValue)
+                          return option ? `${option.emoji} ${option.label}` : `${moodValue}`.replace('-', ' ')
+                        })()}
                       </span>
                     </div>
                     <div className="flex justify-between">

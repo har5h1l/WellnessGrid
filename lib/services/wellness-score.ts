@@ -24,7 +24,7 @@ export class WellnessScoreService {
       // Get user data
       const [userProfile, userConditions, trackingData] = await Promise.all([
         DatabaseService.getUserProfile(userId),
-        DatabaseService.getUserConditions(userId),
+        DatabaseService.getUserHealthConditions(userId),
         this.getRecentTrackingData(userId, scorePeriod)
       ])
 

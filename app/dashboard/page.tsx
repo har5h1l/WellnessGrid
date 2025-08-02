@@ -11,9 +11,10 @@ import { AppLogo } from "@/components/app-logo"
 import { MoodTracker } from "@/components/mood-tracker"
 import { SymptomTracker } from "@/components/symptom-tracker"
 import { MedicationLogger } from "@/components/medication-logger"
-import { Activity, Heart, Pill, MessageCircle, TrendingUp, Clock, Bell, AlertTriangle, Target, ChevronRight, Star } from "lucide-react"
+import { Activity, Heart, Pill, MessageCircle, TrendingUp, Clock, Bell, AlertTriangle, Target, ChevronRight, Star, Zap, TrendingDown } from "lucide-react"
 import Link from "next/link"
 import type { UserProfile, HealthCondition, UserTool, TrackingEntry } from "@/lib/database"
+import { HomepageIntegrationService, DashboardData } from "@/lib/services/homepage-integration"
 
 // Safe dynamic import for services
 let authHelpers: any = null
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [conditions, setConditions] = useState<HealthCondition[]>([])
   const [userTools, setUserTools] = useState<UserTool[]>([])
   const [recentEntries, setRecentEntries] = useState<TrackingEntry[]>([])
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [showMoodTracker, setShowMoodTracker] = useState(false)
@@ -95,6 +97,16 @@ export default function Dashboard() {
         } catch (trackingError) {
           console.log('Dashboard: Tracking entries not available (table may not exist yet):', trackingError.message)
           setRecentEntries([])
+        }
+
+        // Load integrated dashboard data
+        try {
+          const integrated = await HomepageIntegrationService.getDashboardData(user.id)
+          setDashboardData(integrated)
+          console.log('Dashboard: Integrated data loaded')
+        } catch (integrationError) {
+          console.log('Dashboard: Failed to load integrated data:', integrationError)
+          setDashboardData(null)
         }
         
         console.log('Dashboard: User data set successfully')
@@ -298,14 +310,12 @@ export default function Dashboard() {
     )
   }
 
-  // Placeholder data - in a real app, you'd fetch this from Supabase
-  const todaySymptoms = [] // TODO: Implement symptom tracking with Supabase
-  const todayMoods = [] // TODO: Implement mood tracking with Supabase
-  const todayMedicationLogs = [] // TODO: Implement medication logging with Supabase
-  const unreadAlerts = [] // TODO: Implement alerts with Supabase
-
-  // Calculate wellness score (simplified)
-  const wellnessScore = 75 // This would be calculated based on recent data
+  // Use integrated dashboard data
+  const todayStats = dashboardData?.todayStats || { symptomsLogged: 0, moodEntries: 0, medicationsTaken: 0, trackingEntries: 0 }
+  const unreadAlerts = dashboardData?.recentAlerts || []
+  const wellnessScore = dashboardData?.wellnessScore?.overall_score || 75
+  const healthTrends = dashboardData?.healthTrends || []
+  const trackingStreaks = dashboardData?.trackingStreaks || []
 
   // Placeholder for errors
   const errors = []
@@ -362,7 +372,7 @@ export default function Dashboard() {
           <Card className="wellness-card">
             <CardContent className="p-3 text-center">
               <Activity className="w-5 h-5 text-red-500 mx-auto mb-1" />
-              <div className="text-lg font-bold text-gray-900">{todaySymptoms.length}</div>
+              <div className="text-lg font-bold text-gray-900">{todayStats.symptomsLogged}</div>
               <div className="text-xs text-gray-600">symptoms today</div>
             </CardContent>
           </Card>
@@ -370,7 +380,7 @@ export default function Dashboard() {
           <Card className="wellness-card">
             <CardContent className="p-3 text-center">
               <Heart className="w-5 h-5 text-pink-500 mx-auto mb-1" />
-              <div className="text-lg font-bold text-gray-900">{todayMoods.length}</div>
+              <div className="text-lg font-bold text-gray-900">{todayStats.moodEntries}</div>
               <div className="text-xs text-gray-600">mood entries</div>
             </CardContent>
           </Card>
@@ -378,11 +388,110 @@ export default function Dashboard() {
           <Card className="wellness-card">
             <CardContent className="p-3 text-center">
               <Pill className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-              <div className="text-lg font-bold text-gray-900">{todayMedicationLogs.length}</div>
+              <div className="text-lg font-bold text-gray-900">{todayStats.medicationsTaken}</div>
               <div className="text-xs text-gray-600">meds taken</div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Health Alerts */}
+        {unreadAlerts.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Health Alerts</h3>
+              <Badge variant="destructive" className="text-xs">
+                {unreadAlerts.length} alert{unreadAlerts.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              {unreadAlerts.slice(0, 3).map((alert) => (
+                <Card key={alert.id} className="wellness-card border-l-4 border-l-red-500">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          alert.severity === 'critical' ? 'bg-red-100' : 
+                          alert.severity === 'high' ? 'bg-orange-100' : 'bg-yellow-100'
+                        }`}>
+                          <AlertTriangle className={`w-4 h-4 ${
+                            alert.severity === 'critical' ? 'text-red-500' : 
+                            alert.severity === 'high' ? 'text-orange-500' : 'text-yellow-500'
+                          }`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 text-sm">{alert.title}</h4>
+                          <p className="text-xs text-gray-600 mt-1">{alert.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(alert.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {unreadAlerts.length > 3 && (
+                <Link href="/notifications">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View all {unreadAlerts.length} alerts
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Health Trends */}
+        {healthTrends.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Health Trends</h3>
+              <Link href="/insights">
+                <Button variant="ghost" size="sm" className="text-blue-600">
+                  View Details
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {healthTrends.slice(0, 3).map((trend, index) => (
+                <Card key={index} className="wellness-card">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          trend.trend === 'improving' ? 'bg-green-100' : 
+                          trend.trend === 'stable' ? 'bg-blue-100' : 'bg-orange-100'
+                        }`}>
+                          {trend.trend === 'improving' && <TrendingUp className="w-4 h-4 text-green-500" />}
+                          {trend.trend === 'stable' && <Activity className="w-4 h-4 text-blue-500" />}
+                          {trend.trend === 'declining' && <TrendingDown className="w-4 h-4 text-orange-500" />}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 text-sm">{trend.metric}</h4>
+                          <p className="text-xs text-gray-600 capitalize">{trend.trend}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900">
+                          {typeof trend.value === 'number' ? trend.value.toFixed(1) : trend.value}
+                        </div>
+                        <div className={`text-xs ${
+                          Math.abs(trend.change) < 5 ? 'text-gray-500' :
+                          trend.change > 0 ? 'text-green-600' : 'text-orange-600'
+                        }`}>
+                          {trend.change > 0 ? '+' : ''}{trend.change.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recommended Actions */}
         {recommendedActions.length > 0 && (
@@ -558,48 +667,58 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity */}
-        {(todaySymptoms.length > 0 || todayMoods.length > 0) && (
+        {recentEntries.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-lg font-bold text-gray-900">Today's activity</h3>
+            <h3 className="text-lg font-bold text-gray-900">Recent activity</h3>
 
-            {todaySymptoms.slice(0, 2).map((symptom) => (
-              <Card key={symptom.id} className="wellness-card">
+            {recentEntries.slice(0, 3).map((entry) => (
+              <Card key={entry.id} className="wellness-card">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                        <Activity className="w-5 h-5 text-red-500" />
+                      <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                        {entry.tool_id.includes('mood') && <Heart className="w-5 h-5 text-pink-500" />}
+                        {entry.tool_id.includes('glucose') && <Activity className="w-5 h-5 text-red-500" />}
+                        {entry.tool_id.includes('symptom') && <AlertTriangle className="w-5 h-5 text-orange-500" />}
+                        {entry.tool_id.includes('medication') && <Pill className="w-5 h-5 text-blue-500" />}
+                        {!entry.tool_id.includes('mood') && !entry.tool_id.includes('glucose') && 
+                         !entry.tool_id.includes('symptom') && !entry.tool_id.includes('medication') && 
+                         <Activity className="w-5 h-5 text-blue-500" />}
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900 capitalize">{symptom.type}</h4>
-                        <p className="text-sm text-gray-600">Severity: {symptom.severity}/10</p>
+                        <h4 className="font-semibold text-gray-900 capitalize">
+                          {entry.tool_id.replace('-', ' ').replace('_', ' ')}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {entry.tool_id.includes('mood') && entry.data.mood && (() => {
+                            const mood = entry.data.mood
+                            if (typeof mood === 'number') {
+                              if (mood <= 2) return "Mood: Very Sad 😢"
+                              if (mood <= 4) return "Mood: Sad 😔"
+                              if (mood <= 6) return "Mood: Neutral 😐"
+                              if (mood <= 8) return "Mood: Happy 😊"
+                              return "Mood: Very Happy 😄"
+                            }
+                            const moodLabels = {
+                              'very-sad': 'Very Sad 😢',
+                              'sad': 'Sad 😔',
+                              'neutral': 'Neutral 😐',
+                              'happy': 'Happy 😊',
+                              'very-happy': 'Very Happy 😄'
+                            }
+                            return `Mood: ${moodLabels[mood] || mood}`
+                          })()}
+                          {entry.tool_id.includes('glucose') && entry.data.glucose && `${entry.data.glucose} mg/dL`}
+                          {entry.tool_id.includes('symptom') && entry.data.type && `${entry.data.type}`}
+                          {entry.tool_id.includes('medication') && entry.data.medication && `${entry.data.medication}`}
+                          {!entry.tool_id.includes('mood') && !entry.tool_id.includes('glucose') && 
+                           !entry.tool_id.includes('symptom') && !entry.tool_id.includes('medication') && 'Tracked'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-xs text-gray-500 flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
-                      <span>{symptom.time}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {todayMoods.slice(0, 1).map((mood) => (
-              <Card key={mood.id} className="wellness-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center">
-                        <Heart className="w-5 h-5 text-pink-500" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 capitalize">{mood.mood.replace("-", " ")}</h4>
-                        <p className="text-sm text-gray-600">Energy: {mood.energy}/10</p>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{mood.time}</span>
+                      <span>{new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -625,11 +744,37 @@ export default function Dashboard() {
               <CardContent className="p-4 text-center">
                 <Activity className="w-8 h-8 text-blue-500 mx-auto mb-2" />
                 <h4 className="font-semibold text-gray-900">Health Data</h4>
-                                  <p className="text-xs text-gray-600">Detailed insights</p>
+                <p className="text-xs text-gray-600">Detailed insights</p>
               </CardContent>
             </Card>
           </Link>
         </div>
+
+        {/* Developer Testing */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-bold text-gray-900">Testing Tools</h3>
+            <Button
+              onClick={async () => {
+                if (currentUser) {
+                  try {
+                    toast.loading('Generating synthetic data...')
+                    await HomepageIntegrationService.generateSyntheticData(currentUser.id)
+                    toast.success('Synthetic data generated! Refresh to see changes.')
+                  } catch (error) {
+                    toast.error('Failed to generate synthetic data')
+                    console.error(error)
+                  }
+                }
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Generate Test Data (30 days)
+            </Button>
+          </div>
+        )}
       </main>
 
       {/* Modals */}
