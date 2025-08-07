@@ -8,7 +8,6 @@ import { initialState } from "./initial-state"
 import { createActions } from "./actions"
 import { StorageService } from "./storage"
 import { ErrorBoundary } from "@/components/error-boundary"
-import { authHelpers, DatabaseService } from "@/lib/database"
 
 interface AppContextType {
   state: AppState
@@ -35,6 +34,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Check Supabase authentication and load user data
         try {
           console.log("AppProvider: Checking authentication...")
+          
+          // Dynamic import to avoid circular dependencies and initialization issues
+          let authHelpers, DatabaseService
+          try {
+            const databaseModule = await import('@/lib/database')
+            authHelpers = databaseModule.authHelpers
+            DatabaseService = databaseModule.DatabaseService
+            
+            if (!authHelpers || !DatabaseService) {
+              throw new Error('Database services not properly exported')
+            }
+          } catch (importError) {
+            console.error('Failed to import database services:', importError)
+            throw new Error(`Database import failed: ${importError.message}`)
+          }
+          
           const user = await authHelpers.getCurrentUser()
           
           if (user) {

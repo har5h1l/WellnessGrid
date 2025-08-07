@@ -310,11 +310,11 @@ export default function Dashboard() {
     )
   }
 
-  // Use integrated dashboard data
+  // Use integrated dashboard data (no hardcoded fallbacks for consistency)
   const todayStats = dashboardData?.todayStats || { symptomsLogged: 0, moodEntries: 0, medicationsTaken: 0, trackingEntries: 0 }
   const unreadAlerts = dashboardData?.recentAlerts || []
-  const wellnessScore = dashboardData?.wellnessScore?.overall_score || 75
-  const healthTrends = dashboardData?.healthTrends || []
+  const wellnessScore = dashboardData?.wellnessScore?.overall_score || 0
+  const healthInsights = dashboardData?.healthInsights || []
   const trackingStreaks = dashboardData?.trackingStreaks || []
 
   // Placeholder for errors
@@ -443,52 +443,62 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Health Trends */}
-        {healthTrends.length > 0 && (
+        {/* Health Insights Summary */}
+        {healthInsights.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Health Trends</h3>
+              <h3 className="text-lg font-bold text-gray-900">Recent Insights</h3>
               <Link href="/insights">
                 <Button variant="ghost" size="sm" className="text-blue-600">
-                  View Details
+                  View Full Analysis
                 </Button>
               </Link>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              {healthTrends.slice(0, 3).map((trend, index) => (
-                <Card key={index} className="wellness-card">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          trend.trend === 'improving' ? 'bg-green-100' : 
-                          trend.trend === 'stable' ? 'bg-blue-100' : 'bg-orange-100'
-                        }`}>
-                          {trend.trend === 'improving' && <TrendingUp className="w-4 h-4 text-green-500" />}
-                          {trend.trend === 'stable' && <Activity className="w-4 h-4 text-blue-500" />}
-                          {trend.trend === 'declining' && <TrendingDown className="w-4 h-4 text-orange-500" />}
+              {healthInsights.slice(0, 3).map((insight, index) => {
+                const insights = insight.insights || {}
+                const trends = insights.trends || []
+                const recommendations = insights.recommendations || []
+                const concerns = insights.concerns || []
+                
+                return (
+                  <Card key={insight.id || index} className="wellness-card">
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100">
+                            <Star className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 text-sm">
+                              {insights.summary || `${insight.insight_type} insights`}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-1">
+                              {trends.length > 0 && (
+                                <span className="text-xs text-green-600">
+                                  {trends.length} trend{trends.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                              {recommendations.length > 0 && (
+                                <span className="text-xs text-blue-600">
+                                  {recommendations.length} tip{recommendations.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                              {concerns.length > 0 && (
+                                <span className="text-xs text-orange-600">
+                                  {concerns.length} alert{concerns.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900 text-sm">{trend.metric}</h4>
-                          <p className="text-xs text-gray-600 capitalize">{trend.trend}</p>
-                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900">
-                          {typeof trend.value === 'number' ? trend.value.toFixed(1) : trend.value}
-                        </div>
-                        <div className={`text-xs ${
-                          Math.abs(trend.change) < 5 ? 'text-gray-500' :
-                          trend.change > 0 ? 'text-green-600' : 'text-orange-600'
-                        }`}>
-                          {trend.change > 0 ? '+' : ''}{trend.change.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </div>
         )}
@@ -591,15 +601,18 @@ export default function Dashboard() {
                 )
 
                 return (
-                  <Link key={userTool.id} href={`/track/${userTool.tool_id}`}>
+                  <Link key={userTool.id} href={`/track/${toolPreset.id}`}>
                     <Card className="wellness-card hover:shadow-md transition-shadow">
                       <CardContent className="p-3">
                         <div className="text-center space-y-2">
                           <div className="w-8 h-8 mx-auto bg-blue-100 rounded-lg flex items-center justify-center">
                             {toolPreset.type === 'mood_tracker' && <Heart className="w-4 h-4 text-blue-600" />}
-                            {toolPreset.type === 'custom' && <Activity className="w-4 h-4 text-blue-600" />}
-                            {toolPreset.type === 'medication_reminder' && <Target className="w-4 h-4 text-blue-600" />}
-                            {!['mood_tracker', 'custom', 'medication_reminder'].includes(toolPreset.type) && 
+                            {toolPreset.type === 'symptom_tracker' && <AlertTriangle className="w-4 h-4 text-orange-600" />}
+                            {toolPreset.type === 'medication_reminder' && <Pill className="w-4 h-4 text-purple-600" />}
+                            {toolPreset.type === 'glucose_tracker' && <Activity className="w-4 h-4 text-red-600" />}
+                            {toolPreset.type === 'exercise_tracker' && <TrendingUp className="w-4 h-4 text-green-600" />}
+                            {toolPreset.type === 'custom' && <Target className="w-4 h-4 text-blue-600" />}
+                            {!['mood_tracker', 'symptom_tracker', 'medication_reminder', 'glucose_tracker', 'exercise_tracker', 'custom'].includes(toolPreset.type) && 
                               <Activity className="w-4 h-4 text-blue-600" />}
                           </div>
                           <h4 className="font-medium text-sm text-gray-900 line-clamp-2">{toolPreset.name}</h4>
@@ -750,31 +763,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Developer Testing */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="space-y-3">
-            <h3 className="text-lg font-bold text-gray-900">Testing Tools</h3>
-            <Button
-              onClick={async () => {
-                if (currentUser) {
-                  try {
-                    toast.loading('Generating synthetic data...')
-                    await HomepageIntegrationService.generateSyntheticData(currentUser.id)
-                    toast.success('Synthetic data generated! Refresh to see changes.')
-                  } catch (error) {
-                    toast.error('Failed to generate synthetic data')
-                    console.error(error)
-                  }
-                }
-              }}
-              variant="outline"
-              className="w-full"
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              Generate Test Data (30 days)
-            </Button>
-          </div>
-        )}
+
       </main>
 
       {/* Modals */}

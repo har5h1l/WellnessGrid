@@ -1,6 +1,24 @@
 import { supabase } from '@/lib/supabase'
 import { DatabaseService, TrackingEntry } from '@/lib/database'
 import { HealthScore } from '@/lib/database/types'
+import { createClient } from '@supabase/supabase-js'
+
+// Create admin client for server-side operations (only when service role key is available)
+const supabaseAdmin = (() => {
+  if (typeof window === 'undefined' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+  }
+  return null
+})()
 
 interface ScoreComponent {
   name: string
@@ -21,10 +39,10 @@ export class WellnessScoreService {
     console.log(`📊 Calculating wellness score for user ${userId} (${scorePeriod})`)
     
     try {
-      // Get user data
+      // Get user data using admin client for server-side access
       const [userProfile, userConditions, trackingData] = await Promise.all([
-        DatabaseService.getUserProfile(userId),
-        DatabaseService.getUserHealthConditions(userId),
+        this.getUserProfileAdmin(userId),
+        this.getUserHealthConditionsAdmin(userId), 
         this.getRecentTrackingData(userId, scorePeriod)
       ])
 
@@ -542,9 +560,81 @@ export class WellnessScoreService {
    */
   private static async getRecentTrackingData(userId: string, scorePeriod: string): Promise<TrackingEntry[]> {
     const days = this.parseDayRange(scorePeriod)
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-    
-    return await DatabaseService.getTrackingEntries(userId, undefined, 1000)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+    try {
+      // Use admin client if available (server-side), otherwise fall back to regular client
+      const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+      const { data, error } = await client
+        .from('tracking_entries')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('timestamp', startDate.toISOString())
+        .order('timestamp', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching tracking data for wellness score:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get user profile using admin client for server-side access
+   */
+  private static async getUserProfileAdmin(userId: string) {
+    try {
+      // Use admin client if available (server-side), otherwise fall back to DatabaseService
+      if (supabaseAdmin) {
+        const { data, error } = await supabaseAdmin
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+        
+        if (error) {
+          console.error('Error fetching user profile with admin client:', error)
+          return null
+        }
+        
+        return data
+      } else {
+        // Fallback to DatabaseService for client-side access
+        return await DatabaseService.getUserProfile(userId)
+      }
+    } catch (error) {
+      console.error('Error in getUserProfileAdmin:', error)
+      return null
+    }
+  }
+
+  /**
+   * Get user health conditions using admin client for server-side access
+   */
+  private static async getUserHealthConditionsAdmin(userId: string) {
+    try {
+      // Use admin client if available (server-side), otherwise fall back to DatabaseService
+      if (supabaseAdmin) {
+        const { data, error } = await supabaseAdmin
+          .from('health_conditions')
+          .select('*')
+          .eq('user_id', userId)
+        
+        if (error) {
+          console.error('Error fetching user conditions with admin client:', error)
+          return []
+        }
+        
+        return data || []
+      } else {
+        // Fallback to DatabaseService for client-side access
+        return await DatabaseService.getUserHealthConditions(userId)
+      }
+    } catch (error) {
+      console.error('Error in getUserHealthConditionsAdmin:', error)
+      return []
+    }
   }
 
   private static parseDayRange(scorePeriod: string): number {
@@ -571,11 +661,16 @@ export class WellnessScoreService {
 
   private static async saveHealthScore(healthScore: HealthScore): Promise<void> {
     try {
-      const { error } = await supabase
+      // Use admin client if available (server-side), otherwise use regular client  
+      const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+      const { error } = await client
         .from('health_scores')
-        .insert(healthScore)
+        .upsert(healthScore, {
+          onConflict: 'user_id,score_period'
+        })
 
       if (error) throw error
+      console.log('💾 Health score saved to database')
     } catch (error) {
       console.error('Error saving health score:', error)
     }

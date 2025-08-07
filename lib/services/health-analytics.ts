@@ -1,5 +1,18 @@
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { DatabaseService, TrackingEntry } from '@/lib/database'
+
+// Create admin client for server-side operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 import {
   HealthTrend,
   CorrelationData,
@@ -16,6 +29,7 @@ import { AlertService } from './alert-service'
 export class HealthAnalyticsService {
   static async getAnalyticsData(userId: string, timeRange: string = '30d'): Promise<AnalyticsData> {
     try {
+      
       // Check cache first
       const cached = await this.getCachedAnalytics(userId, timeRange)
       if (cached) {
@@ -27,8 +41,8 @@ export class HealthAnalyticsService {
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
 
-      // Get tracking entries
-      const { data: trackingEntries, error } = await supabase
+      // Get tracking entries using admin client for server-side access
+      const { data: trackingEntries, error } = await supabaseAdmin
         .from('tracking_entries')
         .select('*')
         .eq('user_id', userId)
@@ -61,7 +75,7 @@ export class HealthAnalyticsService {
         data_points: entries.length
       }
 
-      // Cache the results
+      // Re-enable caching with UUID fix
       await this.cacheAnalytics(userId, timeRange, analyticsData)
 
       return analyticsData
@@ -351,11 +365,17 @@ export class HealthAnalyticsService {
     const goals: GoalProgress[] = []
     
     const toolUsage = entries.reduce((acc, entry) => {
-      acc[entry.tool_id] = (acc[entry.tool_id] || 0) + 1
+      if (entry.tool_id) {
+        acc[entry.tool_id] = (acc[entry.tool_id] || 0) + 1
+      }
       return acc
     }, {} as Record<string, number>)
 
     Object.entries(toolUsage).forEach(([toolId, count]) => {
+      if (!toolId || toolId === 'temp') {
+        return
+      }
+      
       const goalName = `Daily ${toolId.replace('-tracker', '')} tracking`
       const target = 30 // 30 days goal
       const progress = Math.min(100, (count / target) * 100)
@@ -378,12 +398,18 @@ export class HealthAnalyticsService {
     
     // Group by tool
     const grouped = entries.reduce((acc, entry) => {
-      if (!acc[entry.tool_id]) acc[entry.tool_id] = []
-      acc[entry.tool_id].push(entry)
+      if (entry.tool_id && entry.tool_id !== 'temp') {
+        if (!acc[entry.tool_id]) acc[entry.tool_id] = []
+        acc[entry.tool_id].push(entry)
+      }
       return acc
     }, {} as Record<string, TrackingEntry[]>)
 
     Object.entries(grouped).forEach(([toolId, toolEntries]) => {
+      if (!toolId || toolId === 'temp') {
+        return
+      }
+      
       const streak = this.calculateStreakForTool(toolEntries)
       if (streak) {
         streaks.push({
@@ -505,7 +531,7 @@ export class HealthAnalyticsService {
   private static async getCachedAnalytics(userId: string, timeRange: string): Promise<AnalyticsData | null> {
     try {
       const cacheKey = `analytics_${userId}_${timeRange}`
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('analytics_cache')
         .select('cache_data, expires_at')
         .eq('cache_key', cacheKey)
@@ -527,13 +553,19 @@ export class HealthAnalyticsService {
       const expiresAt = new Date()
       expiresAt.setHours(expiresAt.getHours() + 1) // Cache for 1 hour
 
-      await supabase
+      // Generate a proper UUID for the id field
+      const { randomUUID } = await import('crypto')
+      
+      await supabaseAdmin
         .from('analytics_cache')
         .upsert({
+          id: randomUUID(),
           user_id: userId,
           cache_key: cacheKey,
           cache_data: data,
           expires_at: expiresAt.toISOString()
+        }, {
+          onConflict: 'cache_key'
         })
     } catch (error) {
       console.error('Failed to cache analytics:', error)

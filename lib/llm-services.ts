@@ -269,27 +269,47 @@ export class LLMService {
     }
 
     try {
-      // Use a free model on OpenRouter (like Mistral 7B or Llama models)
-      const completion = await openrouterClient.chat.completions.create({
-        model: "mistralai/mistral-7b-instruct:free",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7
-      });
+      // Use free models on OpenRouter - try multiple free models in case one is unavailable
+      const freeModels = [
+        "mistralai/mistral-7b-instruct:free",
+        "nousresearch/nous-capybara-7b:free",
+        "gryphe/mythomist-7b:free",
+        "huggingfaceh4/zephyr-7b-beta:free"
+      ];
+      
+      let lastError = null;
+      
+      for (const model of freeModels) {
+        try {
+          console.log(`Attempting OpenRouter with free model: ${model}`);
+          const completion = await openrouterClient.chat.completions.create({
+            model: model,
+            messages: [
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            max_tokens: 1000,
+            temperature: 0.7
+          });
 
-      const content = completion.choices[0]?.message?.content || '';
+          const content = completion.choices[0]?.message?.content || '';
 
-      return {
-        success: true,
-        content: content.trim(),
-        service: 'openrouter',
-        model: 'mistralai/mistral-7b-instruct:free'
-      };
+          return {
+            success: true,
+            content: content.trim(),
+            service: 'openrouter',
+            model: model
+          };
+        } catch (modelError: any) {
+          console.log(`Model ${model} failed:`, modelError.message);
+          lastError = modelError;
+          continue;
+        }
+      }
+      
+      throw lastError || new Error('All free models failed');
     } catch (error: any) {
       console.error('OpenRouter API error:', error);
       return {
@@ -318,21 +338,42 @@ export class LLMService {
         content: msg.content
       }));
 
-      const completion = await openrouterClient.chat.completions.create({
-        model: "mistralai/mistral-7b-instruct:free",
-        messages: openaiMessages,
-        max_tokens: 1000,
-        temperature: 0.7
-      });
+      // Use free models on OpenRouter - try multiple free models in case one is unavailable
+      const freeModels = [
+        "mistralai/mistral-7b-instruct:free",
+        "nousresearch/nous-capybara-7b:free",
+        "gryphe/mythomist-7b:free",
+        "huggingfaceh4/zephyr-7b-beta:free"
+      ];
+      
+      let lastError = null;
+      
+      for (const model of freeModels) {
+        try {
+          console.log(`Attempting OpenRouter with history using free model: ${model}`);
+          const completion = await openrouterClient.chat.completions.create({
+            model: model,
+            messages: openaiMessages,
+            max_tokens: 1000,
+            temperature: 0.7
+          });
 
-      const content = completion.choices[0]?.message?.content || '';
+          const content = completion.choices[0]?.message?.content || '';
 
-      return {
-        success: true,
-        content: content.trim(),
-        service: 'openrouter',
-        model: 'mistralai/mistral-7b-instruct:free'
-      };
+          return {
+            success: true,
+            content: content.trim(),
+            service: 'openrouter',
+            model: model
+          };
+        } catch (modelError: any) {
+          console.log(`Model ${model} failed:`, modelError.message);
+          lastError = modelError;
+          continue;
+        }
+      }
+      
+      throw lastError || new Error('All free models failed');
     } catch (error: any) {
       console.error('OpenRouter API error with history:', error);
       return {
@@ -636,6 +677,81 @@ Helpful response:`;
 • You have underlying health conditions`,
       service: 'none',
       error: 'Both LLM services failed, using hardcoded fallback'
+    };
+  }
+
+  /**
+   * Generate structured response (for JSON generation like health insights)
+   * This method is specifically designed for generating structured data responses
+   */
+  async generateStructuredResponse(prompt: string, chatHistory: ChatMessage[] = []): Promise<LLMResponse> {
+    console.log('🔧 Generating structured response with LLM...');
+    
+    if (chatHistory.length > 0) {
+      console.log(`📚 Using chat history (${chatHistory.length} messages) for structured response`);
+      
+      // Format messages for Gemini
+      const geminiMessages = chatHistory.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+      
+      // Add the structured generation prompt as the final message
+      geminiMessages.push({
+        role: 'user',
+        parts: [{ text: prompt }]
+      });
+      
+      console.log('\n[LLM Service] Structured Response Generation with History:');
+      console.log(`${'-'.repeat(50)}`);
+      console.log('Prompt length:', prompt.length);
+      console.log('History messages:', chatHistory.length);
+      console.log(`${'-'.repeat(50)}`);
+      
+      // Try Gemini with history first
+      const geminiResult = await this.callGeminiWithHistory(geminiMessages);
+      if (geminiResult.success) {
+        return geminiResult;
+      }
+
+      // Fallback to OpenRouter with history
+      console.log('Falling back to OpenRouter for structured response generation with history');
+      const historyWithPrompt = [...chatHistory, { 
+        session_id: '', 
+        role: 'user' as const, 
+        content: prompt 
+      }];
+      const openRouterResult = await this.callOpenRouterWithHistory(historyWithPrompt);
+      if (openRouterResult.success) {
+        return openRouterResult;
+      }
+    } else {
+      // No history - use simple prompt
+      console.log('\n[LLM Service] Structured Response Generation (No History):');
+      console.log(`${'-'.repeat(50)}`);
+      console.log('Prompt length:', prompt.length);
+      console.log(`${'-'.repeat(50)}`);
+      
+      // Try Gemini first
+      const geminiResult = await this.callGemini(prompt);
+      if (geminiResult.success) {
+        return geminiResult;
+      }
+
+      // Fallback to OpenRouter
+      console.log('Falling back to OpenRouter for structured response generation');
+      const openRouterResult = await this.callOpenRouter(prompt);
+      if (openRouterResult.success) {
+        return openRouterResult;
+      }
+    }
+
+    // If both fail, return error
+    return {
+      success: false,
+      content: '',
+      service: 'none',
+      error: 'Both services failed for structured response generation'
     };
   }
 

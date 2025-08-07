@@ -3,6 +3,24 @@ import { UserAlert, HealthScore } from '@/lib/database/types'
 import { WellnessScoreService } from './wellness-score'
 import { AlertService } from './alert-service'
 import { createClient } from '@/lib/supabase'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+// Create admin client for server-side operations
+const supabaseAdmin = (() => {
+  if (typeof window === 'undefined' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+  }
+  return null
+})()
 
 export interface DashboardData {
     wellnessScore: HealthScore
@@ -19,11 +37,15 @@ export interface DashboardData {
         currentStreak: number
         lastTracked: string | null
     }>
-    healthTrends: Array<{
-        metric: string
-        trend: 'improving' | 'stable' | 'declining'
-        value: number
-        change: number
+    healthInsights: Array<{
+        id: string
+        insight_type: string
+        generated_at: string
+        insights: any
+        summary?: string
+        trends?: any[]
+        recommendations?: any[]
+        concerns?: any[]
     }>
 }
 
@@ -37,20 +59,20 @@ export class HomepageIntegrationService {
         
         try {
             // Run parallel data fetching for performance
-            const [wellnessScore, recentAlerts, todayStats, trackingStreaks, healthTrends] = await Promise.allSettled([
+            const [wellnessScore, recentAlerts, todayStats, trackingStreaks, healthInsights] = await Promise.allSettled([
                 this.getWellnessScore(userId),
                 this.getRecentAlerts(userId),
                 this.getTodayStats(userId),
                 this.getTrackingStreaks(userId),
-                this.getHealthTrends(userId)
+                this.getHealthInsights(userId)
             ])
 
             const result: DashboardData = {
-                wellnessScore: wellnessScore.status === 'fulfilled' ? wellnessScore.value : this.getDefaultWellnessScore(),
+                wellnessScore: wellnessScore.status === 'fulfilled' ? wellnessScore.value : { overall_score: 50, trend: 'stable' },
                 recentAlerts: recentAlerts.status === 'fulfilled' ? recentAlerts.value : [],
                 todayStats: todayStats.status === 'fulfilled' ? todayStats.value : this.getDefaultTodayStats(),
                 trackingStreaks: trackingStreaks.status === 'fulfilled' ? trackingStreaks.value : [],
-                healthTrends: healthTrends.status === 'fulfilled' ? healthTrends.value : []
+                healthInsights: healthInsights.status === 'fulfilled' ? healthInsights.value : []
             }
 
             console.log(`✅ Dashboard data loaded successfully for user ${userId}`)
@@ -69,8 +91,30 @@ export class HomepageIntegrationService {
         try {
             return await WellnessScoreService.calculateWellnessScore(userId, '7d')
         } catch (error) {
-            console.warn('Failed to calculate wellness score, using default:', error)
-            return this.getDefaultWellnessScore()
+            console.error('Failed to calculate wellness score, using analytics fallback:', error)
+            // Fall back to analytics-based calculation
+            try {
+                const { HealthAnalyticsService } = await import('./health-analytics')
+                const analyticsData = await HealthAnalyticsService.getAnalyticsData(userId, '7d')
+                return {
+                    user_id: userId,
+                    overall_score: analyticsData.health_score || 50,
+                    trend: 'stable',
+                    score_period: '7d',
+                    calculated_at: new Date().toISOString(),
+                    component_scores: {}
+                }
+            } catch (analyticsError) {
+                console.error('Analytics fallback also failed:', analyticsError)
+                return {
+                    user_id: userId,
+                    overall_score: 50,
+                    trend: 'stable',
+                    score_period: '7d',
+                    calculated_at: new Date().toISOString(),
+                    component_scores: {}
+                }
+            }
         }
     }
 
@@ -102,33 +146,49 @@ export class HomepageIntegrationService {
     private static async getTodayStats(userId: string): Promise<DashboardData['todayStats']> {
         try {
             const today = new Date().toISOString().split('T')[0]
-            const todayEntries = await DatabaseService.getRecentTrackingEntries(userId, 1) // Today only
+            const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             
-            const filteredEntries = todayEntries.filter(entry => 
-                entry.timestamp.startsWith(today)
-            )
+            // Get today's entries directly from database using admin client for server-side access
+            const client = supabaseAdmin || createClient()
+            const { data: todayEntries, error } = await client
+                .from('tracking_entries')
+                .select('*')
+                .eq('user_id', userId)
+                .gte('timestamp', today + 'T00:00:00')
+                .lt('timestamp', tomorrow + 'T00:00:00')
 
-            // Group by tool type
-            const symptomsLogged = filteredEntries.filter(e => 
-                e.tool_id.includes('symptom') || e.data.type === 'symptom'
+            if (error) {
+                console.error('Error fetching today entries:', error)
+                return this.getDefaultTodayStats()
+            }
+
+            const entries = todayEntries || []
+
+            // Group by tool type using the exact tool_id values from database
+            const symptomsLogged = entries.filter(e => 
+                e.tool_id === 'symptom-tracker'
             ).length
 
-            const moodEntries = filteredEntries.filter(e => 
-                e.tool_id.includes('mood') || e.data.mood !== undefined
+            const moodEntries = entries.filter(e => 
+                e.tool_id === 'mood-tracker'
             ).length
 
-            const medicationsTaken = filteredEntries.filter(e => 
-                e.tool_id.includes('medication') || e.data.medication !== undefined
+            const medicationsTaken = entries.filter(e => 
+                e.tool_id === 'medication-tracker'
             ).length
+
+            console.log('📊 Today stats calculated:', { symptomsLogged, moodEntries, medicationsTaken, totalEntries: entries.length })
+            console.log('📅 Date range used:', { today: today + 'T00:00:00', tomorrow: tomorrow + 'T00:00:00' })
+            console.log('📊 Sample entries found:', entries.slice(0, 3).map(e => ({ tool_id: e.tool_id, timestamp: e.timestamp })))
 
             return {
                 symptomsLogged,
                 moodEntries,
                 medicationsTaken,
-                trackingEntries: filteredEntries.length
+                trackingEntries: entries.length
             }
         } catch (error) {
-            console.warn('Failed to get today stats:', error)
+            console.error('Failed to get today stats:', error)
             return this.getDefaultTodayStats()
         }
     }
@@ -164,28 +224,48 @@ export class HomepageIntegrationService {
     }
 
     /**
-     * Get health trends for key metrics
+     * Get health insights from database, auto-generate if needed
      */
-    private static async getHealthTrends(userId: string): Promise<DashboardData['healthTrends']> {
+    private static async getHealthInsights(userId: string): Promise<any[]> {
         try {
-            const recentEntries = await DatabaseService.getRecentTrackingEntries(userId, 14)
-            const trends: DashboardData['healthTrends'] = []
-            
-            // Group by tool and calculate trends
-            const groupedData = this.groupEntriesByTool(recentEntries)
-            
-            for (const [toolId, entries] of Object.entries(groupedData)) {
-                if (entries.length < 2) continue // Need at least 2 data points
+            // Check for existing insights
+            const client = supabaseAdmin || createClient()
+            const { data: existingInsights, error } = await client
+                .from('health_insights')
+                .select('*')
+                .eq('user_id', userId)
+                .order('generated_at', { ascending: false })
+                .limit(3)
+
+            if (error) {
+                console.error('Error fetching insights:', error)
+                return []
+            }
+
+            // If we have recent insights (within 24 hours), use them
+            if (existingInsights && existingInsights.length > 0) {
+                const latestInsight = existingInsights[0]
+                const generatedAt = new Date(latestInsight.generated_at)
+                const hoursSinceGenerated = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60)
                 
-                const trend = this.calculateTrend(entries, toolId)
-                if (trend) {
-                    trends.push(trend)
+                if (hoursSinceGenerated < 24) {
+                    console.log('📊 Using existing insights from database')
+                    return existingInsights
                 }
             }
-            
-            return trends
+
+            // Auto-generate insights if none exist or they're old
+            console.log('🤖 Auto-generating insights for homepage')
+            try {
+                const { HealthInsightsService } = await import('./health-insights')
+                const newInsight = await HealthInsightsService.generateHealthInsights(userId)
+                return newInsight ? [newInsight] : []
+            } catch (genError) {
+                console.warn('Failed to auto-generate insights:', genError)
+                return existingInsights || []
+            }
         } catch (error) {
-            console.warn('Failed to get health trends:', error)
+            console.warn('Failed to get health insights:', error)
             return []
         }
     }
@@ -226,202 +306,7 @@ export class HomepageIntegrationService {
         return streak
     }
 
-    /**
-     * Group tracking entries by tool
-     */
-    private static groupEntriesByTool(entries: TrackingEntry[]): Record<string, TrackingEntry[]> {
-        return entries.reduce((acc, entry) => {
-            if (!acc[entry.tool_id]) {
-                acc[entry.tool_id] = []
-            }
-            acc[entry.tool_id].push(entry)
-            return acc
-        }, {} as Record<string, TrackingEntry[]>)
-    }
 
-    /**
-     * Calculate trend for a specific tool's data
-     */
-    private static calculateTrend(entries: TrackingEntry[], toolId: string): DashboardData['healthTrends'][0] | null {
-        if (entries.length < 2) return null
-        
-        // Sort by timestamp
-        const sortedEntries = entries.sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        )
-        
-        let values: number[] = []
-        let metricName = toolId
-        
-        // Extract numeric values based on tool type
-        switch (toolId) {
-            case 'glucose-tracker':
-                values = sortedEntries.map(e => e.data.glucose || e.data.value).filter(v => typeof v === 'number')
-                metricName = 'Blood Glucose'
-                break
-            case 'mood-tracker':
-                values = sortedEntries.map(e => e.data.mood).filter(v => typeof v === 'number')
-                metricName = 'Mood'
-                break
-            case 'sleep-tracker':
-                values = sortedEntries.map(e => e.data.hours || e.data.duration).filter(v => typeof v === 'number')
-                metricName = 'Sleep'
-                break
-            case 'vital-signs':
-                values = sortedEntries.map(e => e.data.systolic || e.data.blood_pressure_systolic).filter(v => typeof v === 'number')
-                metricName = 'Blood Pressure'
-                break
-            default:
-                // Try to find any numeric value
-                values = sortedEntries.map(e => {
-                    const data = e.data as any
-                    return data.value || data.score || data.level || data.rating
-                }).filter(v => typeof v === 'number')
-                break
-        }
-        
-        if (values.length < 2) return null
-        
-        // Simple linear trend calculation
-        const firstHalf = values.slice(0, Math.floor(values.length / 2))
-        const secondHalf = values.slice(Math.floor(values.length / 2))
-        
-        const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length
-        const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length
-        
-        const change = secondAvg - firstAvg
-        const percentChange = firstAvg !== 0 ? (change / firstAvg) * 100 : 0
-        
-        let trend: 'improving' | 'stable' | 'declining'
-        if (Math.abs(percentChange) < 5) {
-            trend = 'stable'
-        } else if (change > 0) {
-            // For mood, higher is better. For glucose, depends on range
-            trend = toolId === 'mood-tracker' ? 'improving' : 'declining'
-        } else {
-            trend = toolId === 'mood-tracker' ? 'declining' : 'improving'
-        }
-        
-        return {
-            metric: metricName,
-            trend,
-            value: secondAvg,
-            change: percentChange
-        }
-    }
-
-    /**
-     * Generate synthetic test data for a user
-     */
-    static async generateSyntheticData(userId: string): Promise<void> {
-        console.log(`🧪 Generating synthetic test data for user ${userId}`)
-        
-        try {
-            const now = new Date()
-            const syntheticEntries: Array<Omit<TrackingEntry, 'id' | 'created_at' | 'updated_at'>> = []
-            
-            // Generate 30 days of varied health data
-            for (let i = 0; i < 30; i++) {
-                const date = new Date(now)
-                date.setDate(date.getDate() - i)
-                
-                // Random glucose readings (simulate diabetes management)
-                if (Math.random() > 0.1) { // 90% compliance
-                    syntheticEntries.push({
-                        user_id: userId,
-                        tool_id: 'glucose-tracker',
-                        timestamp: date.toISOString(),
-                        data: {
-                            glucose: 80 + Math.random() * 100, // 80-180 mg/dL
-                            timing: ['fasting', 'before_meal', '2h_after_meal'][Math.floor(Math.random() * 3)],
-                            carbs: Math.floor(15 + Math.random() * 60),
-                            notes: i % 7 === 0 ? 'Feeling good today' : ''
-                        }
-                    })
-                }
-                
-                // Random mood entries
-                if (Math.random() > 0.2) { // 80% compliance
-                    syntheticEntries.push({
-                        user_id: userId,
-                        tool_id: 'mood-tracker',
-                        timestamp: date.toISOString(),
-                        data: {
-                            mood: (() => {
-                                const moodOptions = ['very-sad', 'sad', 'neutral', 'happy', 'very-happy']
-                                return moodOptions[Math.floor(Math.random() * moodOptions.length)]
-                            })(),
-                            energy: Math.floor(3 + Math.random() * 6),
-                            stress: Math.floor(1 + Math.random() * 8),
-                            notes: Math.random() > 0.8 ? 'Had a challenging day' : ''
-                        }
-                    })
-                }
-                
-                // Medication adherence
-                if (Math.random() > 0.05) { // 95% compliance
-                    syntheticEntries.push({
-                        user_id: userId,
-                        tool_id: 'medication-metformin',
-                        timestamp: date.toISOString(),
-                        data: {
-                            medication: 'Metformin 500mg',
-                            taken: true,
-                            time: '08:00',
-                            notes: ''
-                        }
-                    })
-                }
-                
-                // Sleep tracking
-                if (Math.random() > 0.15) { // 85% compliance
-                    syntheticEntries.push({
-                        user_id: userId,
-                        tool_id: 'sleep-tracker',
-                        timestamp: date.toISOString(),
-                        data: {
-                            hours: 6 + Math.random() * 3, // 6-9 hours
-                            quality: Math.floor(2 + Math.random() * 4), // 2-5 scale
-                            bedtime: '22:30',
-                            wake_time: '06:30'
-                        }
-                    })
-                }
-                
-                // Occasional symptoms
-                if (Math.random() > 0.85) { // 15% of days
-                    syntheticEntries.push({
-                        user_id: userId,
-                        tool_id: 'symptom-tracker',
-                        timestamp: date.toISOString(),
-                        data: {
-                            type: ['fatigue', 'headache', 'nausea', 'dizziness'][Math.floor(Math.random() * 4)],
-                            severity: Math.floor(1 + Math.random() * 7),
-                            duration: Math.floor(30 + Math.random() * 240), // 30-270 minutes
-                            triggers: Math.random() > 0.5 ? 'stress' : 'diet'
-                        }
-                    })
-                }
-            }
-            
-            // Insert synthetic data in batches
-            const batchSize = 10
-            for (let i = 0; i < syntheticEntries.length; i += batchSize) {
-                const batch = syntheticEntries.slice(i, i + batchSize)
-                for (const entry of batch) {
-                    await DatabaseService.createTrackingEntry(entry)
-                }
-                // Small delay to avoid overwhelming the database
-                await new Promise(resolve => setTimeout(resolve, 100))
-            }
-            
-            console.log(`✅ Generated ${syntheticEntries.length} synthetic tracking entries`)
-            
-        } catch (error) {
-            console.error('Error generating synthetic data:', error)
-            throw error
-        }
-    }
 
     // Default/fallback data methods
     private static getDefaultWellnessScore(): HealthScore {
@@ -458,7 +343,7 @@ export class HomepageIntegrationService {
             recentAlerts: [],
             todayStats: this.getDefaultTodayStats(),
             trackingStreaks: [],
-            healthTrends: []
+            healthInsights: []
         }
     }
 }

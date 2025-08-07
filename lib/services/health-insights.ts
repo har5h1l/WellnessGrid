@@ -1,5 +1,18 @@
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { DatabaseService, TrackingEntry } from '@/lib/database'
+
+// Create admin client for server-side operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 import { HealthInsight, UserAlert, HealthScore } from '@/lib/database/types'
 import { LLMService } from '@/lib/llm-services'
 import { HealthAnalyticsService } from './health-analytics'
@@ -181,12 +194,124 @@ export class HealthInsightsService {
     return false
   }
 
+    /**
+   * Create basic insights when user profile is missing but tracking data exists
+   */
+  private static async createBasicInsightFromData(
+    userId: string, 
+    insightType: string, 
+    trackingData: any[]
+  ): Promise<HealthInsight> {
+    console.log(`🔧 Creating basic insights from ${trackingData.length} tracking entries`)
+    
+    // Analyze tracking data without user profile context
+    const basicAnalysis = this.analyzeTrackingDataBasic(trackingData)
+    
+    const basicInsight: HealthInsight = {
+      user_id: userId,
+      insight_type: insightType,
+      insights: {
+        summary: `Based on your recent health tracking data, here's what we observed from ${trackingData.length} entries.`,
+        trends: basicAnalysis.trends,
+        recommendations: [
+          "Complete your profile setup to get more personalized insights",
+          "Continue tracking your health metrics regularly",
+          "Consider adding more health conditions to your profile for better analysis"
+        ],
+        achievements: basicAnalysis.achievements,
+        correlations: []
+      },
+      alerts: [],
+      metadata: {
+        processing_time_ms: 100,
+        data_points_analyzed: trackingData.length,
+        llm_service_used: 'basic_analysis',
+        confidence_score: 0.6
+      },
+      generated_at: new Date().toISOString()
+    }
+
+    // Save to database
+    return await this.saveHealthInsight(basicInsight)
+  }
+
+  /**
+   * Perform basic analysis of tracking data without user profile
+   */
+  private static analyzeTrackingDataBasic(trackingData: any[]) {
+    const trends: any[] = []
+    const achievements: any[] = []
+    
+    // Group by tool type
+    const grouped = trackingData.reduce((acc, entry) => {
+      if (!acc[entry.tool_id]) acc[entry.tool_id] = []
+      acc[entry.tool_id].push(entry)
+      return acc
+    }, {} as Record<string, any[]>)
+
+    // Basic trend analysis for each tool
+    Object.entries(grouped).forEach(([toolId, entries]) => {
+      if (entries.length >= 2) {
+        trends.push({
+          metric: toolId.replace('-tracker', '').replace('_', ' '),
+          direction: 'stable',
+          description: `You've tracked ${entries.length} ${toolId.replace('-tracker', '')} entries recently`,
+          confidence: 0.7
+        })
+      }
+    })
+
+    // Basic achievements
+    if (trackingData.length >= 5) {
+      achievements.push({
+        type: 'Tracking Consistency',
+        description: `Great job! You've logged ${trackingData.length} health entries recently`
+      })
+    }
+
+    return { trends, achievements }
+  }
+
+  /**
+   * Get user profile using admin client for server-side access
+   */
+  private static async getUserProfileAdmin(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user profile:', error)
+      return null
+    }
+    return data
+  }
+
+  /**
+   * Get user health conditions using admin client
+   */
+  private static async getUserHealthConditionsAdmin(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from('health_conditions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+
+    if (error) {
+      console.error('Error fetching user conditions:', error)
+      return []
+    }
+    return data || []
+  }
+
   /**
    * Get the last insight for a user
    */
-  private static async getLastInsight(userId: string): Promise<HealthInsight | null> {
+private static async getLastInsight(userId: string): Promise<HealthInsight | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('health_insights')
         .select('*')
         .eq('user_id', userId)
@@ -217,16 +342,23 @@ export class HealthInsightsService {
     
     const startTime = Date.now()
     
-    // Get user data
+    // Get user data using admin client for server-side access
     const [userProfile, userConditions, trackingData, previousInsights] = await Promise.all([
-      DatabaseService.getUserProfile(userId),
-              DatabaseService.getUserHealthConditions(userId),
+      this.getUserProfileAdmin(userId),
+      this.getUserHealthConditionsAdmin(userId),
       this.getRecentTrackingData(userId, insightType),
       this.getPreviousInsights(userId, insightType)
     ])
 
     if (!userProfile) {
-      throw new Error('User profile not found')
+      console.log('⚠️ User profile not found, creating basic insights without profile data')
+      // Create basic insights without profile data - user might not have completed setup
+      if (trackingData.length === 0) {
+        console.log('⚠️ No tracking data found either, creating basic empty insight')
+        return this.createEmptyInsight(userId, insightType)
+      }
+      // Generate basic insights from tracking data only
+      return this.createBasicInsightFromData(userId, insightType, trackingData)
     }
 
     if (trackingData.length === 0) {
@@ -279,8 +411,8 @@ export class HealthInsightsService {
     const prompt = this.createInsightsPrompt(structuredData, userConditions, previousInsights)
     
     try {
-      // Use the existing LLM service's enhanceQuery method
-      const response = await this.llmService.enhanceQuery(prompt, [])
+      // Use the LLM service's generateStructuredResponse method for JSON generation
+      const response = await this.llmService.generateStructuredResponse(prompt, [])
       
       return {
         success: response.success,
@@ -330,47 +462,65 @@ ${previousInsightsText}
 TASK: Analyze this health data and provide comprehensive insights in the following JSON format:
 
 {
+  "summary": "2-3 sentence summary of overall health status and key findings from the data analysis",
   "trends": [
     {
-      "metric": "string (e.g., 'glucose_level', 'sleep_quality')",
+      "metric": "string (e.g., 'glucose_level', 'sleep_quality', 'mood', 'exercise')",
       "direction": "improving" | "declining" | "stable",
       "confidence": 0.0-1.0,
-      "description": "Clear explanation of the trend"
+      "description": "Clear, specific explanation of the trend with data points or patterns observed"
     }
   ],
   "concerns": [
     {
-      "type": "string (e.g., 'glucose_control', 'sleep_pattern')",
+      "type": "string (e.g., 'glucose_control', 'sleep_pattern', 'medication_adherence')",
       "severity": "low" | "medium" | "high",
-      "description": "Description of the concern",
-      "recommendations": ["actionable recommendation 1", "recommendation 2"]
+      "description": "Detailed description of the health concern based on data patterns",
+      "recommendations": ["specific actionable recommendation 1", "specific actionable recommendation 2"]
     }
   ],
   "recommendations": [
+    "Specific, actionable recommendation based on the data (e.g., 'Consider logging blood glucose before and after meals to identify patterns', 'Aim for 7-8 hours of sleep based on your recent sleep data showing improved mood')"
+  ],
+  "priority_actions": [
     {
-      "category": "string (e.g., 'nutrition', 'exercise', 'medication')",
-      "action": "Specific actionable recommendation",
-      "priority": "low" | "medium" | "high",
-      "rationale": "Explanation of why this recommendation is important"
+      "title": "Short title for priority action (e.g., 'Monitor blood sugar trends', 'Improve sleep consistency')",
+      "description": "Brief explanation of why this is important based on data",
+      "priority": "high" | "medium" | "low",
+      "action_button": "Action text (e.g., 'Track Glucose', 'View Sleep Tips', 'Set Reminder')",
+      "category": "glucose" | "mood" | "sleep" | "exercise" | "medication" | "general"
     }
   ],
   "achievements": [
     {
-      "type": "string (e.g., 'consistency', 'improvement')",
-      "description": "Positive achievement to celebrate",
+      "type": "string (e.g., 'consistency', 'improvement', 'milestone')",
+      "description": "Positive achievement to celebrate with specific metrics when possible",
       "metric_improvement": 0.0-100.0
+    }
+  ],
+  "correlations": [
+    {
+      "factor1": "health metric name",
+      "factor2": "health metric name",
+      "correlation": -1.0 to 1.0,
+      "strength": "weak" | "moderate" | "strong",
+      "finding": "Description of what the correlation means",
+      "actionable": "Practical advice based on this correlation"
     }
   ]
 }
 
 IMPORTANT GUIDELINES:
-1. Focus on actionable insights based on the actual data
-2. Consider the user's specific health conditions
-3. Be encouraging but realistic
-4. Prioritize safety - flag concerning patterns
-5. Provide specific, measurable recommendations
-6. Reference previous insights to show progress
-7. CRITICAL: Return ONLY valid JSON with no additional text, explanations, or markdown formatting
+1. Focus on actionable insights based on the actual data provided - avoid generic advice
+2. Consider the user's specific health conditions and tailor insights accordingly
+3. Be encouraging but realistic - celebrate progress while identifying areas for improvement
+4. Prioritize safety - flag concerning patterns that may need medical attention
+5. Provide specific, measurable recommendations with clear rationales
+6. Reference previous insights to show progress and continuity when available
+7. Look for meaningful correlations between different health metrics
+8. Quantify improvements or declines with specific data points when possible
+9. CRITICAL: Return ONLY valid JSON with no additional text, explanations, or markdown formatting
+10. Ensure all fields are properly filled with real analysis, not placeholder text
 
 ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
 `
@@ -477,11 +627,25 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
    * Validate insights structure
    */
   private static validateInsightsStructure(insights: any): boolean {
-    return !!(
-      insights &&
-      typeof insights === 'object' &&
-      (insights.trends || insights.recommendations || insights.concerns || insights.summary)
+    if (!insights || typeof insights !== 'object') {
+      return false
+    }
+    
+    // Ensure it has the expected top-level structure with at least summary and recommendations
+    const hasRequiredFields = insights.hasOwnProperty('summary') && insights.hasOwnProperty('recommendations')
+    
+    // Check if it has the expected array fields
+    const hasValidArrayFields = (
+      Array.isArray(insights.trends) &&
+      Array.isArray(insights.recommendations) &&
+      Array.isArray(insights.achievements) &&
+      Array.isArray(insights.correlations)
     )
+    
+    // Allow concerns to be optional or array
+    const hasValidConcerns = !insights.concerns || Array.isArray(insights.concerns)
+    
+    return hasRequiredFields && hasValidArrayFields && hasValidConcerns
   }
 
   /**
@@ -657,7 +821,23 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
    */
   private static async getRecentTrackingData(userId: string, insightType: string): Promise<TrackingEntry[]> {
     const days = this.getAnalysisPeriod(insightType)
-    return await DatabaseService.getTrackingEntries(userId, undefined, 500)
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+    
+    const { data, error } = await supabaseAdmin
+      .from('tracking_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', startDate.toISOString())
+      .order('timestamp', { ascending: false })
+      .limit(500)
+    
+    if (error) {
+      console.error('Error fetching tracking data:', error)
+      return []
+    }
+    
+    return data || []
   }
 
   private static getAnalysisPeriod(insightType: string): number {
@@ -671,7 +851,7 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
 
   private static async getPreviousInsights(userId: string, insightType: string): Promise<HealthInsight[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('health_insights')
         .select('*')
         .eq('user_id', userId)
@@ -725,7 +905,93 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
   }
 
   private static extractDetailedMetrics(trackingData: TrackingEntry[]): any {
-    return HealthAnalyticsService.getAnalyticsData('temp', '30d') // Would be refactored to extract just metrics
+    // Extract metrics directly from tracking data without calling analytics service
+    const metrics: any = {}
+    
+    // Group entries by tool type for analysis
+    const grouped = trackingData.reduce((acc, entry) => {
+      if (!acc[entry.tool_id]) acc[entry.tool_id] = []
+      acc[entry.tool_id].push(entry)
+      return acc
+    }, {} as Record<string, TrackingEntry[]>)
+    
+    // Extract specific metrics for each tool type
+    Object.entries(grouped).forEach(([toolId, entries]) => {
+      switch (toolId) {
+        case 'glucose-tracker':
+          metrics.glucose = this.extractGlucoseMetrics(entries)
+          break
+        case 'mood-tracker':
+          metrics.mood = this.extractMoodMetrics(entries)
+          break
+        case 'sleep-tracker':
+          metrics.sleep = this.extractSleepMetrics(entries)
+          break
+        case 'symptom-tracker':
+          metrics.symptoms = this.extractSymptomMetrics(entries)
+          break
+        case 'medication-tracker':
+          metrics.medication = this.extractMedicationMetrics(entries)
+          break
+        default:
+          metrics[toolId] = { count: entries.length, recent_entries: entries.slice(0, 5) }
+      }
+    })
+    
+    return metrics
+  }
+
+  private static extractGlucoseMetrics(entries: TrackingEntry[]) {
+    const values = entries.map(e => e.data?.glucose).filter(v => v != null)
+    return {
+      count: entries.length,
+      average: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+      min: values.length ? Math.min(...values) : null,
+      max: values.length ? Math.max(...values) : null,
+      recent_trend: values.slice(-5)
+    }
+  }
+
+  private static extractMoodMetrics(entries: TrackingEntry[]) {
+    const values = entries.map(e => e.data?.mood || e.data?.rating).filter(v => v != null)
+    return {
+      count: entries.length,
+      average: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+      recent_trend: values.slice(-5)
+    }
+  }
+
+  private static extractSleepMetrics(entries: TrackingEntry[]) {
+    const values = entries.map(e => e.data?.hours || e.data?.duration).filter(v => v != null)
+    return {
+      count: entries.length,
+      average: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+      recent_trend: values.slice(-5)
+    }
+  }
+
+  private static extractSymptomMetrics(entries: TrackingEntry[]) {
+    const symptoms = entries.map(e => e.data?.symptom).filter(s => s)
+    const severities = entries.map(e => e.data?.severity).filter(s => s != null)
+    return {
+      count: entries.length,
+      unique_symptoms: [...new Set(symptoms)],
+      average_severity: severities.length ? severities.reduce((a, b) => a + b, 0) / severities.length : null,
+      most_common: symptoms.length ? symptoms.reduce((a, b, i, arr) => 
+        arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b
+      ) : null
+    }
+  }
+
+  private static extractMedicationMetrics(entries: TrackingEntry[]) {
+    const medications = entries.map(e => e.data?.medication).filter(m => m)
+    const adherence = entries.map(e => e.data?.taken).filter(t => t != null)
+    return {
+      count: entries.length,
+      unique_medications: [...new Set(medications)],
+      adherence_rate: adherence.length ? adherence.filter(Boolean).length / adherence.length : null,
+      recent_adherence: adherence.slice(-10)
+    }
   }
 
   private static calculateDataPeriod(trackingData: TrackingEntry[]): string {
@@ -774,17 +1040,32 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
 
   private static getDefaultInsights(): any {
     return {
+      summary: 'Insufficient data available for detailed health analysis. Continue tracking your health metrics regularly for more personalized insights.',
       trends: [],
       concerns: [],
       recommendations: [
+        'Continue consistent health tracking to gather more data for analysis',
+        'Complete your profile setup for more personalized insights',
+        'Add health conditions to your profile for targeted recommendations'
+      ],
+      priority_actions: [
         {
-          category: 'general',
-          action: 'Continue consistent health tracking to gather more data for analysis',
+          title: 'Start tracking your health',
+          description: 'Begin logging your daily health metrics to generate insights',
+          priority: 'high',
+          action_button: 'Start Tracking',
+          category: 'general'
+        },
+        {
+          title: 'Complete your profile',
+          description: 'Add health conditions for personalized recommendations',
           priority: 'medium',
-          rationale: 'More data will enable better personalized insights'
+          action_button: 'Update Profile',
+          category: 'general'
         }
       ],
-      achievements: []
+      achievements: [],
+      correlations: []
     }
   }
 
@@ -804,7 +1085,7 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
   }
 
   private static async saveHealthInsight(insight: HealthInsight): Promise<HealthInsight> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('health_insights')
       .insert(insight)
       .select()

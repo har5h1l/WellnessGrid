@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { HealthDashboard } from '@/components/analytics/health-dashboard'
+import { DashboardWrapper } from '@/components/analytics/dashboard-wrapper'
 import { LoadingScreen } from '@/components/loading-screen'
 
 export default function InsightsPage() {
@@ -89,8 +89,8 @@ export default function InsightsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="container mx-auto px-4 py-8">
-        <HealthDashboard userId={user.id} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <DashboardWrapper userId={user.id} />
       </div>
     </>
   )
