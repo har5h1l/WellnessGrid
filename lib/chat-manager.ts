@@ -26,6 +26,11 @@ export class ChatManager {
    */
   static getChatSessions(): StoredChatSessions {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return { sessions: [], activeSessionId: null };
+      }
+      
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -49,6 +54,11 @@ export class ChatManager {
    */
   static saveChatSessions(data: StoredChatSessions): void {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Error saving chat sessions:', error);

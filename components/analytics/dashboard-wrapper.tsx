@@ -17,12 +17,19 @@ export function DashboardWrapper({ userId }: DashboardWrapperProps) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
+  const [isFetching, setIsFetching] = useState(false) // Prevent concurrent fetches
 
   // Fetch analytics data
   const fetchAnalyticsData = useCallback(async (forceRefresh = false) => {
     if (!userId) {
       console.log('No user ID provided')
       setLoading(false)
+      return
+    }
+
+    // Prevent concurrent fetches
+    if (isFetching) {
+      console.log('Already fetching analytics data, skipping...')
       return
     }
 
@@ -37,6 +44,7 @@ export function DashboardWrapper({ userId }: DashboardWrapperProps) {
         }
       }
 
+      setIsFetching(true)
       console.log('Fetching analytics data for user:', userId)
       
       // Try to get cached insights first
@@ -64,12 +72,21 @@ export function DashboardWrapper({ userId }: DashboardWrapperProps) {
       console.error('Error fetching analytics data:', error)
       toast.error('Failed to load analytics data')
       setLoading(false)
+    } finally {
+      setIsFetching(false)
     }
-  }, [userId, analyticsData, lastFetchTime])
+  }, [userId, lastFetchTime, isFetching]) // Added isFetching to dependencies
 
   // Fetch fresh analytics data
-  const fetchFreshData = async (showLoading = true) => {
+  const fetchFreshData = useCallback(async (showLoading = true) => {
+    // Prevent concurrent fetches
+    if (isFetching) {
+      console.log('Already fetching fresh data, skipping...')
+      return
+    }
+
     try {
+      setIsFetching(true)
       if (showLoading) setLoading(true)
       
       const response = await fetch(`/api/analytics?userId=${userId}&timeRange=30d&includeInsights=true`, {
@@ -134,9 +151,10 @@ export function DashboardWrapper({ userId }: DashboardWrapperProps) {
         toast.error('Failed to fetch latest analytics')
       }
     } finally {
+      setIsFetching(false)
       if (showLoading) setLoading(false)
     }
-  }
+  }, [userId, isFetching])
 
   // Generate new insights
   const generateInsights = useCallback(async () => {
@@ -212,15 +230,21 @@ export function DashboardWrapper({ userId }: DashboardWrapperProps) {
 
     // No cache or too old, fetch fresh
     fetchAnalyticsData(false)
-  }, [userId, fetchAnalyticsData])
+  }, [userId]) // Removed fetchAnalyticsData dependency to prevent infinite loops
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
-    await fetchFreshData(false)
-    await generateInsights()
-    setRefreshing(false)
-  }, [generateInsights])
+    try {
+      await fetchFreshData(false)
+      // Only generate insights if we don't have recent ones
+      if (!analyticsData?.insights || analyticsData.insights.length === 0) {
+        await generateInsights()
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [fetchFreshData, generateInsights, analyticsData?.insights])
 
   // Navigation helper function
   const handleNavigation = useCallback((path: string) => {

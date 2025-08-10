@@ -408,7 +408,7 @@ private static async getLastInsight(userId: string): Promise<HealthInsight | nul
     userConditions: any[], 
     previousInsights: HealthInsight[]
   ): Promise<LLMResponse> {
-    const prompt = this.createInsightsPrompt(structuredData, userConditions, previousInsights)
+    const prompt = await this.createInsightsPrompt(structuredData, userConditions, previousInsights)
     
     try {
       // Use the LLM service's generateStructuredResponse method for JSON generation
@@ -433,15 +433,18 @@ private static async getLastInsight(userId: string): Promise<HealthInsight | nul
   /**
    * Create structured prompt for LLM analysis
    */
-  private static createInsightsPrompt(
+  private static async createInsightsPrompt(
     structuredData: any, 
     userConditions: any[], 
     previousInsights: HealthInsight[]
-  ): string {
+  ): Promise<string> {
     const conditionsText = userConditions.map(c => `${c.name} (${c.severity})`).join(', ')
     const previousInsightsText = previousInsights.length > 0 
       ? `Previous insights to consider: ${JSON.stringify(previousInsights.slice(0, 2), null, 2)}`
       : 'No previous insights available.'
+
+    // Calculate wellness score components for LLM context
+    const wellnessScore = await this.calculateWellnessScoreForLLM(structuredData, userConditions)
 
     return `
 You are a medical AI assistant analyzing health tracking data to provide personalized insights and recommendations.
@@ -450,6 +453,9 @@ PATIENT CONTEXT:
 - Health Conditions: ${conditionsText || 'None reported'}
 - Data Period: ${structuredData.period}
 - Total Data Points: ${structuredData.totalEntries}
+
+WELLNESS SCORE ANALYSIS:
+${JSON.stringify(wellnessScore, null, 2)}
 
 TRACKING DATA SUMMARY:
 ${JSON.stringify(structuredData.summary, null, 2)}
@@ -524,6 +530,125 @@ IMPORTANT GUIDELINES:
 
 ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
 `
+  }
+
+  /**
+   * Calculate wellness score components for LLM context
+   */
+  private static async calculateWellnessScoreForLLM(structuredData: any, userConditions: any[]): Promise<any> {
+    try {
+      // Import WellnessScoreService dynamically to avoid circular dependencies
+      const { WellnessScoreService } = await import('./wellness-score')
+      
+      // Calculate component scores based on tracking data
+      const componentScores: Record<string, number> = {}
+      
+      // Calculate glucose score
+      if (structuredData.metrics.glucose) {
+        const glucoseEntries = structuredData.metrics.glucose.entries || []
+        componentScores.glucose = this.calculateComponentScore(glucoseEntries, 'glucose')
+      }
+      
+      // Calculate sleep score
+      if (structuredData.metrics.sleep) {
+        const sleepEntries = structuredData.metrics.sleep.entries || []
+        componentScores.sleep = this.calculateComponentScore(sleepEntries, 'sleep')
+      }
+      
+      // Calculate exercise score
+      if (structuredData.metrics.exercise) {
+        const exerciseEntries = structuredData.metrics.exercise.entries || []
+        componentScores.exercise = this.calculateComponentScore(exerciseEntries, 'exercise')
+      }
+      
+      // Calculate mood score
+      if (structuredData.metrics.mood) {
+        const moodEntries = structuredData.metrics.mood.entries || []
+        componentScores.mood = this.calculateComponentScore(moodEntries, 'mood')
+      }
+      
+      // Calculate overall score
+      const overallScore = Object.values(componentScores).reduce((sum, score) => sum + score, 0) / Object.keys(componentScores).length
+      
+      return {
+        overall_score: Math.round(overallScore * 10) / 10,
+        component_scores: componentScores,
+        analysis: {
+          strengths: Object.entries(componentScores).filter(([_, score]) => score >= 70).map(([name, _]) => name),
+          areas_for_improvement: Object.entries(componentScores).filter(([_, score]) => score < 50).map(([name, _]) => name),
+          balanced_areas: Object.entries(componentScores).filter(([_, score]) => score >= 50 && score < 70).map(([name, _]) => name)
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating wellness score for LLM:', error)
+      return {
+        overall_score: 50,
+        component_scores: {},
+        analysis: { strengths: [], areas_for_improvement: [], balanced_areas: [] }
+      }
+    }
+  }
+
+  /**
+   * Calculate individual component score
+   */
+  private static calculateComponentScore(entries: any[], componentType: string): number {
+    if (entries.length === 0) return 50 // Default score for no data
+    
+    switch (componentType) {
+      case 'glucose':
+        return this.calculateGlucoseComponentScore(entries)
+      case 'sleep':
+        return this.calculateSleepComponentScore(entries)
+      case 'exercise':
+        return this.calculateExerciseComponentScore(entries)
+      case 'mood':
+        return this.calculateMoodComponentScore(entries)
+      default:
+        return 50
+    }
+  }
+
+  private static calculateGlucoseComponentScore(entries: any[]): number {
+    const levels = entries.map(e => e.glucose_level || e.value).filter(l => l && !isNaN(l))
+    if (levels.length === 0) return 50
+    
+    const avgLevel = levels.reduce((sum, level) => sum + level, 0) / levels.length
+    const inRange = levels.filter(level => level >= 70 && level <= 140).length / levels.length
+    
+    return Math.min(100, Math.max(0, (inRange * 80) + (avgLevel < 200 ? 20 : 0)))
+  }
+
+  private static calculateSleepComponentScore(entries: any[]): number {
+    const hours = entries.map(e => e.hours_slept || e.value).filter(h => h && !isNaN(h))
+    if (hours.length === 0) return 50
+    
+    const avgHours = hours.reduce((sum, h) => sum + h, 0) / hours.length
+    const goodSleep = hours.filter(h => h >= 7 && h <= 9).length / hours.length
+    
+    return Math.min(100, Math.max(0, (goodSleep * 80) + (avgHours >= 6 ? 20 : 0)))
+  }
+
+  private static calculateExerciseComponentScore(entries: any[]): number {
+    if (entries.length === 0) return 50
+    
+    const totalMinutes = entries.reduce((sum, entry) => {
+      const duration = parseFloat(entry.exercise_duration || entry.duration || 0)
+      return sum + (isNaN(duration) ? 0 : duration)
+    }, 0)
+    
+    const avgMinutesPerDay = totalMinutes / Math.max(1, entries.length)
+    const targetMinutes = 22 // 150 minutes per week
+    
+    return Math.min(100, Math.max(0, (avgMinutesPerDay / targetMinutes) * 100))
+  }
+
+  private static calculateMoodComponentScore(entries: any[]): number {
+    const ratings = entries.map(e => e.mood_rating || e.value).filter(r => r && !isNaN(r))
+    if (ratings.length === 0) return 50
+    
+    const avgRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+    return Math.min(100, Math.max(0, (avgRating / 5) * 100))
   }
 
   /**

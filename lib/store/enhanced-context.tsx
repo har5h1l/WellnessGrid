@@ -23,7 +23,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = React.useState(false)
 
   // Create actions with dispatch
-  const actions = React.useMemo(() => createActions(dispatch), [])
+  const actions = React.useMemo(() => createActions(dispatch), [dispatch])
 
   // Initialize app data
   useEffect(() => {
@@ -206,7 +206,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       actions,
       isReady,
     }),
-    [state, actions, isReady],
+    [state, dispatch, actions, isReady],
   )
 
   return (

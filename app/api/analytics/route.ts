@@ -23,6 +23,27 @@ export async function GET(request: NextRequest) {
     const cached = searchParams.get('cached') === 'true'
     let userId = searchParams.get('userId') || null
     
+    // Add request deduplication to prevent excessive calls
+    const requestKey = `${userId}-${timeRange}-${includeInsights}`
+    const cacheKey = `analytics_request_${requestKey}`
+    
+    // Check if we have a recent request in memory (simple in-memory cache)
+    const now = Date.now()
+    const recentRequests = global.recentAnalyticsRequests || new Map()
+    const lastRequest = recentRequests.get(cacheKey)
+    
+    if (lastRequest && (now - lastRequest) < 30000) { // 30 seconds
+      console.log('🔄 Preventing duplicate request within 30 seconds')
+      return NextResponse.json({
+        success: false,
+        error: 'Request too frequent, please wait 30 seconds'
+      }, { status: 429 })
+    }
+    
+    // Update request timestamp
+    recentRequests.set(cacheKey, now)
+    global.recentAnalyticsRequests = recentRequests
+    
     // If no userId in query params, try to get from Authorization header
     if (!userId) {
       try {
@@ -57,6 +78,8 @@ export async function GET(request: NextRequest) {
         if (!error && testUser) {
           userId = testUser.id
           console.log('🧪 Using test user for analytics:', userId)
+        } else {
+          console.log('🧪 Test user not found or error:', error?.message)
         }
       } catch (fallbackError) {
         console.log('🧪 Test user fallback failed:', fallbackError.message)
@@ -123,70 +146,32 @@ export async function GET(request: NextRequest) {
           console.log('Dashboard data unavailable, using analytics only:', dashboardError.message)
         }
         
-        // Add insights if requested
+        // Add insights if requested - simplified to reduce database calls
         if (includeInsights) {
           try {
-            // Query existing insights from database with debugging using admin client
-            console.log(`🔍 GET: Querying insights for user: ${userId}`)
-            const { data: existingInsights, error: queryError } = await supabaseAdmin
-              .from('health_insights')
-              .select('*')
-              .eq('user_id', userId)
-              .order('generated_at', { ascending: false })
-              .limit(3)
-            
-            console.log('📊 GET Query result:', { 
-              error: queryError, 
-              insightsCount: existingInsights?.length || 0,
-              insights: existingInsights?.map(i => ({ id: i.id, type: i.insight_type, summary: i.insights?.summary }))
-            })
-            
-            // Check if we have recent insights (within 24 hours) like homepage does
-            let useExistingInsights = false
-            if (!queryError && existingInsights && existingInsights.length > 0) {
-              const latestInsight = existingInsights[0]
-              const generatedAt = new Date(latestInsight.generated_at)
-              const hoursSinceGenerated = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60)
+            // Only query insights if we don't have them from dashboard data
+            if (!analyticsData.insights || analyticsData.insights.length === 0) {
+              console.log(`🔍 GET: Querying insights for user: ${userId}`)
+              const { data: existingInsights, error: queryError } = await supabaseAdmin
+                .from('health_insights')
+                .select('*')
+                .eq('user_id', userId)
+                .order('generated_at', { ascending: false })
+                .limit(3)
               
-              if (hoursSinceGenerated < 24) {
-                console.log(`✅ Using existing insights from database (${hoursSinceGenerated.toFixed(1)}h old)`)
-                analyticsData.insights = existingInsights.map(insight => ({
-                  id: insight.id,
-                  insight_type: insight.insight_type,
-                  generated_at: insight.generated_at,
-                  insights: insight.insights
-                }))
-                useExistingInsights = true
-              }
-            }
-            
-            if (!useExistingInsights) {
-              // Check if we have sufficient data for insights generation
-              const hasTrackingData = analyticsData.data_points > 0
-              const hasDashboardData = analyticsData.health_score && analyticsData.today_stats
+              console.log('📊 GET Query result:', { 
+                error: queryError, 
+                insightsCount: existingInsights?.length || 0,
+                insights: existingInsights?.map(i => ({ id: i.id, type: i.insight_type, summary: i.insights?.summary }))
+              })
               
-              if (hasTrackingData || hasDashboardData) {
-                // Auto-generate insights from available data
-                console.log(`🤖 Auto-generating insights from ${hasTrackingData ? 'tracking' : 'dashboard'} data`)
-                try {
-                  const { HealthInsightsService } = await import('@/lib/services/health-insights')
-                  const newInsights = await HealthInsightsService.generateHealthInsights(userId)
-                  if (newInsights && newInsights.insights) {
-                    analyticsData.insights = [newInsights]
-                    console.log('✅ Auto-generated insights successfully')
-                  } else {
-                    analyticsData.insights = []
-                    console.log('⚠️ Insights generation returned no data')
-                  }
-                } catch (genError) {
-                  console.error('Failed to auto-generate insights:', genError)
-                  analyticsData.insights = []
-                }
-              } else {
-                console.log('⚠️ No sufficient data for insights generation (no tracking data or dashboard data)')
-                // Use existing insights as fallback even if old
-                if (!queryError && existingInsights && existingInsights.length > 0) {
-                  console.log('📊 Using old insights as fallback')
+              if (!queryError && existingInsights && existingInsights.length > 0) {
+                const latestInsight = existingInsights[0]
+                const generatedAt = new Date(latestInsight.generated_at)
+                const hoursSinceGenerated = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60)
+                
+                if (hoursSinceGenerated < 24) {
+                  console.log(`✅ Using existing insights from database (${hoursSinceGenerated.toFixed(1)}h old)`)
                   analyticsData.insights = existingInsights.map(insight => ({
                     id: insight.id,
                     insight_type: insight.insight_type,
@@ -194,12 +179,19 @@ export async function GET(request: NextRequest) {
                     insights: insight.insights
                   }))
                 } else {
-                  analyticsData.insights = []
+                  console.log('📊 Using old insights as fallback')
+                  analyticsData.insights = existingInsights.map(insight => ({
+                    id: insight.id,
+                    insight_type: insight.insight_type,
+                    generated_at: insight.generated_at,
+                    insights: insight.insights
+                  }))
                 }
+              } else {
+                analyticsData.insights = []
               }
             } else {
-              // Using existing recent insights
-              console.log('✅ Using recent insights from database')
+              console.log('✅ Using insights from dashboard data')
             }
           } catch (insightError) {
             console.error('Failed to get insights from database:', insightError.message)

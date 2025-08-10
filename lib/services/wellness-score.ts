@@ -30,13 +30,34 @@ interface ScoreComponent {
 export class WellnessScoreService {
   
   /**
-   * Calculate comprehensive wellness score for a user
+   * Calculate comprehensive wellness score for a user using LLM
    */
   static async calculateWellnessScore(
     userId: string, 
     scorePeriod: string = '7d'
   ): Promise<HealthScore> {
-    console.log(`📊 Calculating wellness score for user ${userId} (${scorePeriod})`)
+    console.log(`🧠 Calculating LLM-based wellness score for user ${userId} (${scorePeriod})`)
+    
+    try {
+      // Use LLM-based wellness score service
+      const { LLMWellnessScoreService } = await import('./llm-wellness-score')
+      return await LLMWellnessScoreService.calculateWellnessScore(userId, scorePeriod)
+      
+    } catch (error) {
+      console.error('Error calculating LLM wellness score, falling back to rule-based:', error)
+      // Fallback to original rule-based calculation
+      return await this.calculateWellnessScoreRuleBased(userId, scorePeriod)
+    }
+  }
+
+  /**
+   * Original rule-based wellness score calculation (fallback)
+   */
+  static async calculateWellnessScoreRuleBased(
+    userId: string, 
+    scorePeriod: string = '7d'
+  ): Promise<HealthScore> {
+    console.log(`📊 Calculating rule-based wellness score for user ${userId} (${scorePeriod})`)
     
     try {
       // Get user data using admin client for server-side access
@@ -82,11 +103,11 @@ export class WellnessScoreService {
       // Save to database
       await this.saveHealthScore(healthScore)
       
-      console.log(`✅ Wellness score calculated: ${healthScore.overall_score}/100`)
+      console.log(`✅ Rule-based wellness score calculated: ${healthScore.overall_score}/100`)
       return healthScore
 
     } catch (error) {
-      console.error('Error calculating wellness score:', error)
+      console.error('Error calculating rule-based wellness score:', error)
       throw error
     }
   }

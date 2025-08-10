@@ -83,7 +83,7 @@ export class HealthContextService {
     const { health_score, trends, data_points } = analyticsData
     
     const scoreText = health_score 
-      ? `Health score: ${health_score.overall_score}/100 (${health_score.trend})`
+                  ? `Health score: ${health_score.overall_score.toFixed(1)}/100 (${health_score.trend})`
       : 'Health score: Not available'
     
     const trendCount = trends?.length || 0

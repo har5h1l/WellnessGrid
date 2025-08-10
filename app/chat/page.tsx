@@ -1,32 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { useApp, useUser, useConditions } from "@/lib/store/enhanced-context"
-import { AppSelectors } from "@/lib/store/selectors"
-import { MoodTracker } from "@/components/mood-tracker"
-import { SymptomTracker } from "@/components/symptom-tracker"
-import { MedicationLogger } from "@/components/medication-logger"
 import { AppLogo } from "@/components/app-logo"
-import { ChatSidebar, ChatSidebarToggle } from "@/components/chat-sidebar"
-import { ChatManager, ChatSession } from "@/lib/chat-manager"
-import { ArrowLeft, Send, Activity, Heart, Pill, TrendingUp, Calendar, AlertCircle, BookOpen, Sparkles, Plus, MessageSquare } from "lucide-react"
+import { ArrowLeft, Send } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 
 interface AIMessage {
   type: "user" | "ai";
   content: string;
   timestamp: string;
-  suggestions?: string[];
-  sources?: Array<{
-    title: string;
-    content?: string;
-    similarity: string;
-  }>;
-  mockMode?: boolean;
 }
 
 export default function ChatAssistant() {
@@ -36,39 +21,13 @@ export default function ChatAssistant() {
 
   const [newMessage, setNewMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const [showMoodTracker, setShowMoodTracker] = useState(false)
-  const [showSymptomTracker, setShowSymptomTracker] = useState(false)
-  const [showMedicationLogger, setShowMedicationLogger] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeSession, setActiveSession] = useState<ChatSession | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  const [messages, setMessages] = useState<AIMessage[]>([])
 
   useEffect(() => {
     if (isReady) {
       actions.navigate("/chat")
     }
-    scrollToBottom()
-  }, [actions, isReady, state.aiMessages])
-  
-  // Initialize active session on mount
-  useEffect(() => {
-    const session = ChatManager.getActiveChat()
-    setActiveSession(session)
-    console.log('Loaded active chat session:', session)
-  }, [])
-  
-  // Clear messages when switching sessions (they'll be loaded from backend)
-  useEffect(() => {
-    if (activeSession) {
-      // Clear current messages when switching sessions
-      // Messages will be loaded from the backend based on sessionId
-      console.log('Switched to session:', activeSession.id, 'Backend sessionId:', activeSession.sessionId)
-    }
-  }, [activeSession])
+  }, [actions, isReady])
 
   // Show loading if context is not ready
   if (!isReady) {
@@ -82,252 +41,35 @@ export default function ChatAssistant() {
     )
   }
 
-  const quickActions = [
-    {
-      icon: Activity,
-      label: "Log symptom",
-      action: () => setShowSymptomTracker(true),
-      color: "bg-red-100 text-red-600",
-    },
-    {
-      icon: Heart,
-      label: "Track mood",
-      action: () => setShowMoodTracker(true),
-      color: "bg-pink-100 text-pink-600",
-    },
-    {
-      icon: Pill,
-      label: "Log medication",
-      action: () => setShowMedicationLogger(true),
-      color: "bg-blue-100 text-blue-600",
-    },
-    {
-      icon: TrendingUp,
-      label: "View trends",
-      action: () => (window.location.href = "/track"),
-      color: "bg-green-100 text-green-600",
-    },
-    {
-      icon: Calendar,
-      label: "Schedule reminder",
-      action: () => handleQuickMessage("Help me set up a medication reminder"),
-      color: "bg-purple-100 text-purple-600",
-    },
-    {
-      icon: AlertCircle,
-      label: "Emergency help",
-      action: () => handleQuickMessage("I need emergency guidance"),
-      color: "bg-orange-100 text-orange-600",
-    },
-  ]
-
-  const handleQuickMessage = (message: string) => {
-    setNewMessage(message)
-    handleSendMessage(message)
-  }
-
-  const handleSessionChange = (session: ChatSession) => {
-    if (session.id !== activeSession?.id) {
-      setActiveSession(session)
-      // Clear current messages - they'll be loaded based on the new session
-      actions.clearAIMessages()
-      setSidebarOpen(false) // Close sidebar on mobile after selection
-      console.log('Switched to chat session:', session.title)
-    }
-  }
-
-  const handleNewChat = () => {
-    const newSession = ChatManager.createNewChat()
-    setActiveSession(newSession)
-    // Clear current messages for new chat
-    actions.clearAIMessages()
-    setSidebarOpen(false) // Close sidebar on mobile after creation
-    console.log('Created new chat session:', newSession.title)
-  }
-
-  const generateAIResponse = async (userMessage: string): Promise<{answer: string, sources?: any[], mockMode?: boolean, sessionId?: string}> => {
-    try {
-      // Create enhanced user context with health conditions and user ID
-      const userContext = {
-        userId: user?.id, // Add user ID for health analytics context
-        healthConditions: conditions.map(c => c.name)
-      };
-
-      console.log('Sending user context to chat API:', { userId: user?.id, conditionsCount: conditions.length });
-
-      // Call our LLM API with session management
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          query: userMessage,
-          userContext: userContext,
-          sessionId: activeSession?.sessionId // Use backend sessionId from active session
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Return the full AI response data (updated to match new API format)
-      return {
-        answer: data.answer || data.response || "I apologize, but I'm having trouble generating a response right now. Please try again.",
-        sources: data.sources,
-        mockMode: data.mockMode,
-        sessionId: data.sessionId // Return sessionId from API response
-      };
-      
-    } catch (error) {
-      console.error('Error calling LLM API:', error);
-      
-      // Fallback to condition-specific responses if API fails
-      return {
-        answer: generateFallbackResponse(userMessage),
-        sources: undefined,
-        mockMode: true
-      };
-    }
-  }
-
-  const generateFallbackResponse = (userMessage: string): string => {
-    const message = userMessage.toLowerCase()
-    const conditionSpecificResponses: Record<string, string[]> = {
-      asthma: [
-        "Based on your asthma history, I'd recommend tracking any breathing changes. Would you like to log a symptom?",
-        "Remember to keep your inhaler nearby, especially when you notice early warning signs like coughing or chest tightness.",
-        "For asthma management, consistent tracking helps identify triggers. Have you noticed any patterns lately?",
-      ],
-      diabetes: [
-        "With your diabetes, regular glucose monitoring is key. Would you like to log your latest reading?",
-        "Staying hydrated is especially important with diabetes. Have you been drinking enough water today?",
-        "Managing diabetes involves balancing medication, diet, and activity. How has your energy been today?",
-      ],
-      arthritis: [
-        "For juvenile arthritis, tracking pain levels can help your doctor adjust treatment. Would you like to log your symptoms?",
-        "Gentle movement can help with arthritis stiffness. Have you done any stretches today?",
-        "Temperature changes can affect arthritis symptoms. Have you noticed any weather-related patterns?",
-      ],
-    }
-
-    // Emergency responses (priority)
-    if (message.includes("emergency") || message.includes("urgent") || message.includes("help")) {
-      return "If this is a medical emergency, please call 911 or go to the nearest emergency room immediately. For urgent but non-emergency concerns, contact your healthcare provider. I'm here to support you with general guidance and tracking."
-    }
-
-    // Symptom-related responses
-    if (message.includes("symptom") || message.includes("pain") || message.includes("hurt")) {
-      return "I understand you're experiencing symptoms. It's important to track these patterns. Would you like me to help you log this symptom? I can also provide some general guidance based on your condition."
-    }
-
-    // Mood-related responses
-    if (
-      message.includes("mood") ||
-      message.includes("sad") ||
-      message.includes("anxious") ||
-      message.includes("stressed")
-    ) {
-      return "Thank you for sharing how you're feeling. Your emotional wellbeing is just as important as your physical health. Tracking your mood can help identify patterns. Would you like some coping strategies or should we log your current mood?"
-    }
-
-    // Medication-related responses
-    if (message.includes("medication") || message.includes("medicine") || message.includes("pill")) {
-      return "Medication adherence is crucial for managing your condition effectively. I can help you track your medications, set reminders, or answer questions about your treatment plan. What would be most helpful?"
-    }
-
-    // Condition-specific responses
-    for (const condition of conditions) {
-      const conditionName = condition.name.toLowerCase()
-      for (const key in conditionSpecificResponses) {
-        if (conditionName.includes(key)) {
-          const responses = conditionSpecificResponses[key]
-          return responses[Math.floor(Math.random() * responses.length)]
-        }
-      }
-    }
-
-    // General supportive responses
-    const supportiveResponses = [
-      "I'm here to support you on your health journey. What would you like to focus on today?",
-      "Thank you for sharing that with me. Managing a chronic condition takes courage, and you're doing great by staying engaged with your health.",
-      "That's a great question! Based on your health profile, I can provide some personalized suggestions. What specific area would you like to explore?",
-      "I understand this can be challenging. Remember that small, consistent steps make a big difference in managing your health. How can I help you today?",
-    ]
-
-    return supportiveResponses[Math.floor(Math.random() * supportiveResponses.length)]
-  }
-
   const handleSendMessage = async (messageText?: string) => {
     const messageToSend = messageText || newMessage
     if (!messageToSend.trim()) return
 
-    const userMessage = {
-      type: "user" as const,
+    const userMessage: AIMessage = {
+      type: "user",
       content: messageToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }
 
-    actions.addAIMessage(userMessage)
+    setMessages(prev => [...prev, userMessage])
     setNewMessage("")
     setIsTyping(true)
 
     try {
-      // Generate AI response using our LLM API
-      const aiResponseData = await generateAIResponse(messageToSend)
-      
-      // Update backend sessionId if it changed
-      if (aiResponseData.sessionId && activeSession && aiResponseData.sessionId !== activeSession.sessionId) {
-        ChatManager.updateChatSession(activeSession.id, { sessionId: aiResponseData.sessionId })
-        setActiveSession(prev => prev ? { ...prev, sessionId: aiResponseData.sessionId } : null)
-        console.log('Updated backend sessionId for chat:', aiResponseData.sessionId)
-      }
-      
-      // Update chat metadata
-      if (activeSession) {
-        // Update title if this is the first message
-        if (activeSession.messageCount === 0) {
-          ChatManager.updateChatTitle(activeSession.id, messageToSend)
-        }
-        
-        // Increment message count and update last message
-        ChatManager.incrementMessageCount(activeSession.id, aiResponseData.answer)
-        
-        // Update local state
-        const updatedData = ChatManager.getChatSessions()
-        const updatedSession = updatedData.sessions.find(s => s.id === activeSession.id)
-        if (updatedSession) {
-          setActiveSession(updatedSession)
-        }
-      }
-      
-      const aiMessage = {
-        type: "ai" as const,
-        content: aiResponseData.answer,
+      // Simple AI response for testing
+      const aiResponse: AIMessage = {
+        type: "ai",
+        content: `Thank you for your message: "${messageToSend}". I'm here to help you with your health journey.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        suggestions: ["Log symptoms", "Track mood", "View progress", "Set reminder"],
-        sources: aiResponseData.sources,
-        mockMode: aiResponseData.mockMode,
       }
 
-      actions.addAIMessage(aiMessage)
+      setTimeout(() => {
+        setMessages(prev => [...prev, aiResponse])
+        setIsTyping(false)
+      }, 1000)
     } catch (error) {
       console.error('Error generating AI response:', error)
-      
-      // Show error message to user
-      const errorMessage = {
-        type: "ai" as const,
-        content: "I'm sorry, I'm having trouble responding right now. Please try again in a moment. If this is urgent, please contact your healthcare provider.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        suggestions: ["Try again", "Contact support", "Emergency help"],
-      }
-      
-      actions.addAIMessage(errorMessage)
-    } finally {
-        setIsTyping(false)
+      setIsTyping(false)
     }
   }
 
@@ -348,36 +90,11 @@ export default function ChatAssistant() {
     )
   }
 
-  // Temporarily get all AI messages for debugging
-  const aiMessages = state.aiMessages.slice(-50)
-
-  // Debug logging
-  console.log('Chat Debug Info:', {
-    userId: state.user?.id,
-    totalAIMessages: state.aiMessages.length,
-    filteredAIMessages: aiMessages.length,
-    allMessages: state.aiMessages,
-    user: state.user
-  })
-
   return (
     <div className="min-h-screen wellness-gradient pb-20">
-      {/* Chat Sidebar */}
-      <ChatSidebar 
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        activeSession={activeSession}
-        onSessionChange={handleSessionChange}
-        onNewChat={handleNewChat}
-      />
-      
       {/* Header */}
       <header className="wellness-header relative z-30">
         <div className="flex items-center gap-2">
-          <ChatSidebarToggle 
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
           <Link href="/dashboard">
             <Button variant="ghost" size="icon" className="text-gray-600">
               <ArrowLeft className="w-5 h-5" />
@@ -387,37 +104,16 @@ export default function ChatAssistant() {
         
         <div className="flex-1 text-center">
           <h1 className="text-lg font-bold text-gray-900 truncate px-2">
-            {activeSession?.title || 'AI Health Coach'}
+            AI Health Coach
           </h1>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleNewChat}
-            className="text-gray-600 hover:bg-gray-100"
-            title="New chat"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
         </div>
       </header>
 
-      <div className={`flex flex-col h-[calc(100vh-180px)] transition-all duration-300 ${sidebarOpen ? 'lg:ml-80' : ''}`}>
+      <div className="flex flex-col h-[calc(100vh-180px)]">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {aiMessages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
-              <div className="w-32 h-32 mb-6">
-                <Image
-                  src="/images/ai-assistant.png"
-                  alt="AI Assistant"
-                  width={128}
-                  height={128}
-                  className="object-contain animate-float"
-                />
-              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Welcome to your AI Health Coach</h3>
               <p className="text-gray-600 mb-6 max-w-md">
                 I'm here to help you manage your {conditions.length > 0 ? conditions[0].name : "health condition"}. Ask
@@ -425,8 +121,8 @@ export default function ChatAssistant() {
               </p>
             </div>
           ) : (
-            aiMessages.map((message) => (
-              <div key={message.id} className="mb-6">
+            messages.map((message, index) => (
+              <div key={index} className="mb-6">
                 {message.type === "user" ? (
                   // User message - right aligned bubble
                   <div className="flex justify-end">
@@ -446,55 +142,18 @@ export default function ChatAssistant() {
                   <div className="w-full">
                     <div className="flex items-start space-x-3 mb-3">
                       <div className="wellness-avatar">
-                        <Image src="/images/ai-assistant.png" alt="AI Coach" width={32} height={32} />
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-blue-600">AI</span>
+                        </div>
                       </div>
                       <div className="text-sm font-medium text-gray-700">AI Coach</div>
                     </div>
                     <div className="ml-11">
                       <div className="wellness-message-ai">
-                        <MarkdownRenderer 
-                          content={message.content} 
-                          className="wellness-message-ai-content"
-                        />
-                        
-                        {message.mockMode && (
-                          <div className="flex items-center gap-1 mt-4 text-xs text-blue-600">
-                            <Sparkles className="w-3 h-3" />
-                            <span>Demo mode - using sample health data</span>
-                          </div>
-                        )}
-                        
-                        {message.sources && message.sources.length > 0 && (
-                          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <div className="flex items-center gap-1 mb-2">
-                              <BookOpen className="w-3 h-3 text-gray-500" />
-                              <span className="text-xs font-medium text-gray-700">Information sources:</span>
-                            </div>
-                            <div className="space-y-1">
-                              {message.sources.map((source, index) => (
-                                <div key={index} className="text-xs text-gray-600 flex justify-between items-center">
-                                  <span className="font-medium">{source.title}</span>
-                                  <span className="text-gray-400">({Math.round(parseFloat(source.similarity) * 100)}% match)</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {message.suggestions && message.suggestions.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {message.suggestions.map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleQuickMessage(suggestion)}
-                              className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-                            >
-                              {suggestion}
-                            </button>
-                          ))}
+                        <div className="wellness-message-ai-content">
+                          {message.content}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -507,7 +166,9 @@ export default function ChatAssistant() {
               <div className="w-full">
                 <div className="flex items-start space-x-3 mb-3">
                   <div className="wellness-avatar">
-                    <Image src="/images/ai-assistant.png" alt="AI Coach" width={32} height={32} />
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">AI</span>
+                    </div>
                   </div>
                   <div className="text-sm font-medium text-gray-700">AI Coach</div>
                 </div>
@@ -527,38 +188,13 @@ export default function ChatAssistant() {
               </div>
             </div>
           )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Quick Action Buttons */}
-        <div className="px-4 py-3">
-          <div className="wellness-scrollable-buttons">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className={`wellness-action-button ${action.color} flex items-center space-x-2`}
-              >
-                <action.icon className="w-4 h-4" />
-                <span>{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Medical Disclaimer */}
-        <div className="px-4 py-2">
-          <div className="flex items-center justify-center text-xs text-gray-500 gap-1">
-            <AlertCircle className="w-3 h-3" />
-            <span>For informational purposes only. Always consult healthcare professionals for medical advice.</span>
-          </div>
         </div>
 
         {/* Message Input */}
         <div className="px-4 py-3">
           <div className="flex space-x-2">
             <Input
-              placeholder={`Ask about ${activeSession?.title || 'your health'}...`}
+              placeholder="Ask about your health..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
@@ -575,11 +211,6 @@ export default function ChatAssistant() {
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      {showMoodTracker && <MoodTracker onClose={() => setShowMoodTracker(false)} />}
-      {showSymptomTracker && <SymptomTracker onClose={() => setShowSymptomTracker(false)} />}
-      {showMedicationLogger && <MedicationLogger onClose={() => setShowMedicationLogger(false)} />}
     </div>
   )
 }

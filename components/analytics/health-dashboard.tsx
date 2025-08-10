@@ -305,9 +305,9 @@ export const HealthDashboard = memo(function HealthDashboard({ userId, className
               <div className="space-y-4">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {typeof analyticsData.health_score === 'object' 
+                    {(typeof analyticsData.health_score === 'object' 
               ? analyticsData.health_score?.overall_score || 0
-              : analyticsData.health_score || 0}
+              : analyticsData.health_score || 0).toFixed(1)}
                   </span>
                   <span className="text-sm text-gray-500 dark:text-gray-400">/100</span>
                 </div>
@@ -660,34 +660,7 @@ export const HealthDashboard = memo(function HealthDashboard({ userId, className
                   <span className="text-xl text-gray-500 dark:text-gray-400">/100</span>
                 </div>
                 
-                {/* Health Areas Breakdown */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Contributing Areas</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {analyticsData.health_score?.component_scores ? 
-                      Object.entries(analyticsData.health_score.component_scores)
-                        .filter(([_, value]) => (value as number) > 0)
-                        .slice(0, 4)
-                        .map(([area, score], index) => (
-                        <div key={area} className="flex items-center justify-between p-2 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                            <span className="text-xs capitalize text-gray-700 dark:text-gray-300">
-                              {area.replace('_', ' ')}
-                            </span>
-                          </div>
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">
-                            {(score as number).toFixed(0)}
-                          </span>
-                        </div>
-                      )) : (
-                        <div className="col-span-2 text-center py-4">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Start tracking to see breakdown</p>
-                        </div>
-                      )
-                    }
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
             
@@ -985,7 +958,7 @@ function InteractiveOverviewSection({ analyticsData }: { analyticsData: any }) {
   // If no real health score data, generate sample data for demonstration
   if (healthScoreData.length === 0) {
     healthScoreData = [
-      { name: 'Overall Health', value: analyticsData.health_score?.overall_score || 48, color: '#ef4444' },
+                        { name: 'Overall Health', value: (analyticsData.health_score?.overall_score || 48).toFixed(1), color: '#ef4444' },
       { name: 'Data Completeness', value: Math.min(100, (analyticsData.data_points || 0) * 10), color: '#f97316' }
     ]
   }
@@ -1064,7 +1037,7 @@ function InteractiveOverviewSection({ analyticsData }: { analyticsData: any }) {
             )}
             <div className="mt-4 text-center">
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {analyticsData.health_score?.overall_score || 0}/100
+                                    {(analyticsData.health_score?.overall_score || 0).toFixed(1)}/100
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Overall Health Score
@@ -2214,19 +2187,7 @@ function GoalsAndStreaksSection({ goals, streaks }: { goals: GoalProgress[], str
   )
 }
 
-function getStreakEmoji(metricName: string): string {
-  const emojis = {
-    glucose: '🩸',
-    mood: '😊',
-    sleep: '😴',
-    exercise: '💪',
-    nutrition: '🥗',
-    hydration: '💧',
-    medication: '💊',
-    symptoms: '📋'
-  }
-  return emojis[metricName.toLowerCase()] || '📊'
-}
+
 
 function AlertsSection({ alerts }: { alerts: any[] }) {
   return (
@@ -2327,45 +2288,7 @@ function CorrelationItem({ correlation }: { correlation: CorrelationData }) {
   )
 }
 
-// Utility Functions
-function generateTimeSeriesData(trends: any[], days: number = 7) {
-  if (!trends || trends.length === 0) return null
-  
-  // Generate sample time series data for demonstration
-  const timeSeriesData = []
-  const today = new Date()
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    
-    const dataPoint: any = { date: dateStr }
-    
-    // Add trend data for each metric
-    trends.forEach((trend, index) => {
-      const metricName = trend.metric_name?.toLowerCase()
-      if (metricName) {
-        // Generate realistic sample data based on the trend type
-        let baseValue = trend.value || 0
-        let variation = baseValue * 0.1 * (Math.random() - 0.5) // ±10% variation
-        
-        // Add some trend progression
-        if (trend.trend_direction === 'improving') {
-          variation += (days - 1 - i) * (baseValue * 0.02) // Gradual improvement
-        } else if (trend.trend_direction === 'declining') {
-          variation -= (days - 1 - i) * (baseValue * 0.02) // Gradual decline
-        }
-        
-        dataPoint[metricName] = Math.max(0, baseValue + variation)
-      }
-    })
-    
-    timeSeriesData.push(dataPoint)
-  }
-  
-  return timeSeriesData.length > 1 ? timeSeriesData : null
-}
+
 
 // New Consolidated Section Components
 function EnhancedTrendsSection({ trends, correlations }: { trends: HealthTrend[], correlations: CorrelationData[] }) {
@@ -2742,7 +2665,7 @@ function CorrelationsSection({ correlations }: { correlations: CorrelationData[]
               <p className="text-yellow-700 dark:text-yellow-400">Noticeable relationship between metrics</p>
             </div>
             <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <div className="font-medium text-gray-800 dark:text-gray-300 mb-1"><40% Weak</div>
+              <div className="font-medium text-gray-800 dark:text-gray-300 mb-1">&lt;40% Weak</div>
               <p className="text-gray-700 dark:text-gray-400">Little or no clear relationship</p>
             </div>
           </div>
@@ -2752,12 +2675,4 @@ function CorrelationsSection({ correlations }: { correlations: CorrelationData[]
   )
 }
 
-function InfoCard({ icon, title, description }: { icon: string, title: string, description: string }) {
-  return (
-    <div className="text-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-all duration-200">
-      <div className="text-3xl mb-3">{icon}</div>
-      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{title}</h4>
-      <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
-    </div>
-  )
-}
+

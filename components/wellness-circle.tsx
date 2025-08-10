@@ -12,8 +12,8 @@ interface WellnessCircleProps {
 
 export function WellnessCircle({
   score,
-  size = 120,
-  strokeWidth = 8,
+  size = 240,
+  strokeWidth = 6,
   showLabel = true,
   className = "",
 }: WellnessCircleProps) {
@@ -34,7 +34,7 @@ export function WellnessCircle({
   const getColor = (score: number) => {
     if (score >= 80) return "#10b981" // green-500
     if (score >= 60) return "#f59e0b" // yellow-500
-    return "#ef4444" // red-500
+    return "#f97316" // orange-500 (changed to match image)
   }
 
   return (
@@ -57,9 +57,9 @@ export function WellnessCircle({
         />
       </svg>
       {showLabel && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-gray-900">{Math.round(animatedScore)}%</span>
-          <span className="text-xs text-gray-600">wellness</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4">
+          <span className="text-2xl font-bold text-gray-900 leading-none">{animatedScore.toFixed(1)}</span>
+          <span className="text-base text-gray-500 mt-1 leading-none">/ 100</span>
         </div>
       )}
     </div>

@@ -61,8 +61,8 @@ export class HealthAnalyticsService {
         this.calculateStreaks(userId, entries)
       ])
 
-      // Calculate health score based on trends
-      const healthScore = this.calculateHealthScore(trends, entries.length)
+      // Calculate health score using LLM-based wellness score service
+      const healthScore = await WellnessScoreService.calculateWellnessScore(userId, timeRange)
 
       const analyticsData: AnalyticsData = {
         trends,
@@ -95,28 +95,27 @@ export class HealthAnalyticsService {
       return acc
     }, {} as Record<string, TrackingEntry[]>)
 
-    // Calculate glucose trends
-    if (grouped['glucose-tracker']) {
-      const glucoseTrend = this.calculateGlucoseTrend(grouped['glucose-tracker'])
-      if (glucoseTrend) trends.push(glucoseTrend)
+    // Dynamically calculate trends for all available tracking tools
+    const toolTrendCalculators: Record<string, (entries: TrackingEntry[]) => HealthTrend | null> = {
+      'glucose-tracker': this.calculateGlucoseTrend,
+      'mood-tracker': this.calculateMoodTrend,
+      'sleep-tracker': this.calculateSleepTrend,
+      'exercise-tracker': this.calculateExerciseTrend,
+      'medication-tracker': this.calculateMedicationTrend,
+      'symptom-tracker': this.calculateSymptomTrend,
+      'nutrition-tracker': this.calculateNutritionTrend,
+      'weight-tracker': this.calculateWeightTrend,
+      'blood-pressure-tracker': this.calculateBloodPressureTrend,
+      'heart-rate-tracker': this.calculateHeartRateTrend
     }
 
-    // Calculate mood trends
-    if (grouped['mood-tracker']) {
-      const moodTrend = this.calculateMoodTrend(grouped['mood-tracker'])
-      if (moodTrend) trends.push(moodTrend)
-    }
-
-    // Calculate sleep trends
-    if (grouped['sleep-tracker']) {
-      const sleepTrend = this.calculateSleepTrend(grouped['sleep-tracker'])
-      if (sleepTrend) trends.push(sleepTrend)
-    }
-
-    // Calculate exercise trends
-    if (grouped['exercise-tracker']) {
-      const exerciseTrend = this.calculateExerciseTrend(grouped['exercise-tracker'])
-      if (exerciseTrend) trends.push(exerciseTrend)
+    // Calculate trends for all available tools
+    for (const [toolId, entries] of Object.entries(grouped)) {
+      const calculator = toolTrendCalculators[toolId]
+      if (calculator && entries.length >= 2) {
+        const trend = calculator.call(this, entries)
+        if (trend) trends.push(trend)
+      }
     }
 
     return trends
@@ -257,6 +256,189 @@ export class HealthAnalyticsService {
     }
   }
 
+  private static calculateMedicationTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length === 0) return null
+
+    const taken = entries.filter(entry => 
+      entry.data.taken === true || entry.data.taken === 'true'
+    ).length
+    const adherenceRate = (taken / entries.length) * 100
+    const confidence = Math.min(0.9, Math.max(0.6, entries.length / 20))
+
+    let trendDirection: string
+    if (adherenceRate >= 90) {
+      trendDirection = 'excellent'
+    } else if (adherenceRate >= 75) {
+      trendDirection = 'good'
+    } else if (adherenceRate >= 50) {
+      trendDirection = 'moderate'
+    } else {
+      trendDirection = 'concerning'
+    }
+
+    return {
+      metric_name: 'medication',
+      trend_direction: trendDirection,
+      value: Math.round(adherenceRate),
+      confidence,
+      data_points: entries.length,
+      time_period: `${entries.length} entries`,
+      adherence_rate: adherenceRate
+    }
+  }
+
+  private static calculateSymptomTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length === 0) return null
+
+    const severities = entries.map(entry => entry.data.severity || 3).filter(s => !isNaN(s))
+    const avgSeverity = severities.reduce((sum, s) => sum + s, 0) / severities.length
+    const confidence = Math.min(0.8, Math.max(0.6, entries.length / 10))
+
+    let trendDirection: string
+    if (avgSeverity <= 2) {
+      trendDirection = 'excellent'
+    } else if (avgSeverity <= 3) {
+      trendDirection = 'good'
+    } else if (avgSeverity <= 4) {
+      trendDirection = 'moderate'
+    } else {
+      trendDirection = 'concerning'
+    }
+
+    return {
+      metric_name: 'symptoms',
+      trend_direction: trendDirection,
+      value: Math.round(avgSeverity * 10) / 10,
+      confidence,
+      data_points: entries.length,
+      time_period: `${entries.length} entries`,
+      avg_severity: avgSeverity
+    }
+  }
+
+  private static calculateNutritionTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length === 0) return null
+
+    const calories = entries.map(entry => entry.data.calories || 0).filter(c => !isNaN(c))
+    const avgCalories = calories.reduce((sum, c) => sum + c, 0) / calories.length
+    const confidence = Math.min(0.8, Math.max(0.6, entries.length / 10))
+
+    let trendDirection: string
+    if (avgCalories >= 1800 && avgCalories <= 2200) {
+      trendDirection = 'excellent'
+    } else if (avgCalories >= 1500 && avgCalories <= 2500) {
+      trendDirection = 'good'
+    } else if (avgCalories >= 1200 && avgCalories <= 2800) {
+      trendDirection = 'moderate'
+    } else {
+      trendDirection = 'concerning'
+    }
+
+    return {
+      metric_name: 'nutrition',
+      trend_direction: trendDirection,
+      value: Math.round(avgCalories),
+      confidence,
+      data_points: entries.length,
+      time_period: `${entries.length} entries`,
+      avg_calories: avgCalories
+    }
+  }
+
+  private static calculateWeightTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length < 2) return null
+
+    const weights = entries.map(entry => entry.data.weight || 0).filter(w => !isNaN(w))
+    const trend = this.calculateLinearTrend(weights)
+    const avgWeight = weights.reduce((sum, w) => sum + w, 0) / weights.length
+    const confidence = Math.min(0.9, Math.max(0.6, weights.length / 10))
+
+    let trendDirection: string
+    if (Math.abs(trend) < 0.5) {
+      trendDirection = 'stable'
+    } else if (trend < 0) {
+      trendDirection = 'improving'
+    } else {
+      trendDirection = 'increasing'
+    }
+
+    return {
+      metric_name: 'weight',
+      trend_direction: trendDirection,
+      value: Math.round(avgWeight),
+      confidence,
+      data_points: weights.length,
+      time_period: `${weights.length} readings`,
+      slope: trend
+    }
+  }
+
+  private static calculateBloodPressureTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length < 2) return null
+
+    const systolic = entries.map(entry => entry.data.systolic || 0).filter(s => !isNaN(s))
+    const diastolic = entries.map(entry => entry.data.diastolic || 0).filter(d => !isNaN(d))
+    
+    if (systolic.length === 0 || diastolic.length === 0) return null
+
+    const avgSystolic = systolic.reduce((sum, s) => sum + s, 0) / systolic.length
+    const avgDiastolic = diastolic.reduce((sum, d) => sum + d, 0) / diastolic.length
+    const confidence = Math.min(0.9, Math.max(0.6, entries.length / 10))
+
+    let trendDirection: string
+    if (avgSystolic < 120 && avgDiastolic < 80) {
+      trendDirection = 'excellent'
+    } else if (avgSystolic < 130 && avgDiastolic < 85) {
+      trendDirection = 'good'
+    } else if (avgSystolic < 140 && avgDiastolic < 90) {
+      trendDirection = 'moderate'
+    } else {
+      trendDirection = 'concerning'
+    }
+
+    return {
+      metric_name: 'blood_pressure',
+      trend_direction: trendDirection,
+      value: Math.round(avgSystolic),
+      confidence,
+      data_points: entries.length,
+      time_period: `${entries.length} readings`,
+      systolic: avgSystolic,
+      diastolic: avgDiastolic
+    }
+  }
+
+  private static calculateHeartRateTrend(entries: TrackingEntry[]): HealthTrend | null {
+    if (entries.length < 2) return null
+
+    const heartRates = entries.map(entry => entry.data.heart_rate || entry.data.bpm || 0).filter(hr => !isNaN(hr))
+    if (heartRates.length === 0) return null
+
+    const avgHeartRate = heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length
+    const confidence = Math.min(0.9, Math.max(0.6, entries.length / 10))
+
+    let trendDirection: string
+    if (avgHeartRate >= 60 && avgHeartRate <= 100) {
+      trendDirection = 'excellent'
+    } else if (avgHeartRate >= 50 && avgHeartRate <= 110) {
+      trendDirection = 'good'
+    } else if (avgHeartRate >= 40 && avgHeartRate <= 120) {
+      trendDirection = 'moderate'
+    } else {
+      trendDirection = 'concerning'
+    }
+
+    return {
+      metric_name: 'heart_rate',
+      trend_direction: trendDirection,
+      value: Math.round(avgHeartRate),
+      confidence,
+      data_points: entries.length,
+      time_period: `${entries.length} readings`,
+      avg_bpm: avgHeartRate
+    }
+  }
+
   private static calculateLinearTrend(values: number[]): number {
     if (values.length < 2) return 0
 
@@ -283,19 +465,69 @@ export class HealthAnalyticsService {
     // Group by date to find correlations
     const dailyData = this.groupEntriesByDate(entries)
     
-    // Calculate sleep-mood correlation
+    // Calculate sleep-mood correlation (sleep duration vs mood energy)
     const sleepMoodCorr = this.calculateMetricCorrelation(
       dailyData, 'sleep-tracker', 'mood-tracker',
-      'hours_slept', 'mood_rating'
+      'duration', 'energy'
     )
     if (sleepMoodCorr) correlations.push(sleepMoodCorr)
 
-    // Calculate exercise-mood correlation
+    // Calculate sleep-stress correlation (sleep duration vs stress level)
+    const sleepStressCorr = this.calculateMetricCorrelation(
+      dailyData, 'sleep-tracker', 'mood-tracker',
+      'duration', 'stress'
+    )
+    if (sleepStressCorr) correlations.push(sleepStressCorr)
+
+    // Calculate exercise-mood correlation (exercise duration vs mood energy)
     const exerciseMoodCorr = this.calculateMetricCorrelation(
       dailyData, 'exercise-tracker', 'mood-tracker',
-      'duration', 'mood_rating'
+      'duration', 'energy'
     )
     if (exerciseMoodCorr) correlations.push(exerciseMoodCorr)
+
+    // Calculate exercise-stress correlation (exercise duration vs stress level)
+    const exerciseStressCorr = this.calculateMetricCorrelation(
+      dailyData, 'exercise-tracker', 'mood-tracker',
+      'duration', 'stress'
+    )
+    if (exerciseStressCorr) correlations.push(exerciseStressCorr)
+
+    // Filter out illogical correlations using LLM
+    if (correlations.length > 0) {
+      console.log('🔍 Original correlations before filtering:', correlations.map(c => 
+        `${c.metric1} ↔ ${c.metric2}: ${(c.correlation * 100).toFixed(1)}%`
+      ))
+      
+      try {
+        const { CorrelationFilterService } = await import('./correlation-filter')
+        console.log('✅ CorrelationFilterService imported successfully')
+        
+        const filterResult = await CorrelationFilterService.filterIllogicalCorrelations({
+          correlations,
+          userId: entries[0]?.user_id || 'unknown'
+        })
+        
+        console.log('🧠 Filter result:', {
+          filtered: filterResult.filteredCorrelations.length,
+          removed: filterResult.removedCorrelations.length,
+          reasoning: filterResult.reasoning
+        })
+        
+        if (filterResult.removedCorrelations.length > 0) {
+          console.log('🚫 Filtered out illogical correlations:', filterResult.reasoning)
+          console.log('Removed correlations:', filterResult.removedCorrelations.map(c => 
+            `${c.metric1} ↔ ${c.metric2}: ${(c.correlation * 100).toFixed(1)}%`
+          ))
+        }
+        
+        return filterResult.filteredCorrelations
+      } catch (error) {
+        console.error('❌ Error filtering correlations:', error)
+        // Return original correlations if filtering fails
+        return correlations
+      }
+    }
 
     return correlations
   }
@@ -336,8 +568,8 @@ export class HealthAnalyticsService {
     const correlation = this.calculatePearsonCorrelation(pairs)
     
     return {
-      metric_1: tool1.replace('-tracker', ''),
-      metric_2: tool2.replace('-tracker', ''),
+      metric1: tool1.replace('-tracker', ''),
+      metric2: tool2.replace('-tracker', ''),
       correlation,
       significance: pairs.length > 10 ? 0.05 : 0.1,
       data_points: pairs.length
