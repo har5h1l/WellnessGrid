@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Home, Activity, MessageCircle, BarChart, User, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useApp } from "@/lib/store/enhanced-context"
+import { useApp } from "@/lib/store/safe-context"
 import { Button } from "@/components/ui/button"
 
 export function EnhancedMobileNav() {

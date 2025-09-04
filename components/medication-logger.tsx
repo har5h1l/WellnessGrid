@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useApp } from "@/lib/store/enhanced-context"
+import { useApp } from "@/lib/store/safe-context"
 import { DatabaseService, authHelpers } from "@/lib/database"
 import type { User } from '@supabase/supabase-js'
 import { X, Pill, Settings } from "lucide-react"

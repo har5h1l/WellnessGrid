@@ -612,6 +612,19 @@ export interface HealthTrend {
   value: number
   tool_id: string
   metric: string
+  metric_name?: string
+  trend_direction?: string
+  confidence?: number
+  data_points?: number
+  time_period?: string
+  slope?: number
+  weekly_frequency?: number
+  adherence_rate?: number
+  avg_severity?: number
+  avg_calories?: number
+  systolic?: number
+  diastolic?: number
+  avg_bpm?: number
 }
 
 export interface CorrelationData {
@@ -630,6 +643,7 @@ export interface GoalProgress {
   progress_percentage: number
   days_remaining?: number
   trend: 'on_track' | 'behind' | 'ahead'
+  status?: 'completed' | 'on_track' | 'behind'
 }
 
 export interface StreakData {
@@ -639,6 +653,7 @@ export interface StreakData {
   longest_streak: number
   last_entry_date: string
   streak_status: 'active' | 'broken' | 'at_risk'
+  metric_name?: string
 }
 
 export interface AnalyticsData {
@@ -649,4 +664,5 @@ export interface AnalyticsData {
   health_score: HealthScore
   insights: HealthInsight[]
   alerts: UserAlert[]
+  data_points?: number
 } 

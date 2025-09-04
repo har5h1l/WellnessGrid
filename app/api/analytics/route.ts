@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { HealthAnalyticsService } from '@/lib/services/health-analytics'
-import { HomepageIntegrationService } from '@/lib/services/homepage-integration'
+import { UnifiedAnalyticsService } from '@/lib/services/unified-analytics'
 
-// Create a service role client for server-side operations
+// create a service role client for server-side operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -21,30 +20,48 @@ export async function GET(request: NextRequest) {
     const includeInsights = searchParams.get('includeInsights') === 'true'
     const timeRange = searchParams.get('timeRange') || '30d'
     const cached = searchParams.get('cached') === 'true'
+    const forceRefresh = searchParams.get('forceRefresh') === 'true'
     let userId = searchParams.get('userId') || null
     
-    // Add request deduplication to prevent excessive calls
-    const requestKey = `${userId}-${timeRange}-${includeInsights}`
+    // add intelligent request deduplication to prevent excessive calls
+    const requestKey = `${userId}-${timeRange}-${includeInsights}-${cached}`
     const cacheKey = `analytics_request_${requestKey}`
     
-    // Check if we have a recent request in memory (simple in-memory cache)
+    // check if we have a recent request in memory (simple in-memory cache)
     const now = Date.now()
     const recentRequests = global.recentAnalyticsRequests || new Map()
     const lastRequest = recentRequests.get(cacheKey)
     
-    if (lastRequest && (now - lastRequest) < 30000) { // 30 seconds
-      console.log('🔄 Preventing duplicate request within 30 seconds')
+    // More intelligent rate limiting:
+    // - Allow cached requests more frequently (2 seconds)
+    // - Allow fresh requests less frequently (5 seconds)
+    // - Don't rate limit if no previous request exists (initial load)
+    const rateLimitWindow = cached ? 2000 : 5000 // 2s for cached, 5s for fresh
+    
+    if (lastRequest && (now - lastRequest) < rateLimitWindow) {
+      console.log(`🔄 Preventing duplicate ${cached ? 'cached' : 'fresh'} request within ${rateLimitWindow/1000} seconds`)
+      
+      // For cached requests, return a more gentle message
+      if (cached) {
+        return NextResponse.json({
+          success: false,
+          error: 'Cached data request too recent',
+          retryAfter: Math.ceil((rateLimitWindow - (now - lastRequest)) / 1000)
+        }, { status: 429 })
+      }
+      
       return NextResponse.json({
         success: false,
-        error: 'Request too frequent, please wait 30 seconds'
+        error: 'Request too frequent, please wait a moment',
+        retryAfter: Math.ceil((rateLimitWindow - (now - lastRequest)) / 1000)
       }, { status: 429 })
     }
     
-    // Update request timestamp
+    // update request timestamp
     recentRequests.set(cacheKey, now)
     global.recentAnalyticsRequests = recentRequests
     
-    // If no userId in query params, try to get from Authorization header
+    // if no userId in query params, try to get from Authorization header
     if (!userId) {
       try {
         const authHeader = request.headers.get('authorization')
@@ -65,14 +82,14 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Fallback: For testing purposes, if no auth and specific user email exists
+    // fallback: for testing purposes, if no auth and specific user email exists
     if (!userId) {
       console.log('🔍 No authenticated user, checking for test user fallback')
       try {
         const { data: testUser, error } = await supabaseAdmin
           .from('user_profiles')
           .select('id')
-          .eq('id', '69478d34-90bd-476f-b47a-7d099c1cb913')
+          .eq('id', process.env.TEST_USER_ID || '69478d34-90bd-476f-b47a-7d099c1cb913')
           .single()
         
         if (!error && testUser) {
@@ -86,148 +103,61 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check cache first if requested
-    if (cached && userId) {
-      try {
-        console.log('📦 Checking cache for user:', userId)
-        const { data: cachedData, error } = await supabaseAdmin
-          .from('analytics_cache')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('cache_key', `analytics_${timeRange}`)
-          .gte('expires_at', new Date().toISOString())
-          .single()
-        
-        if (!error && cachedData && cachedData.cache_data) {
-          console.log('✅ Using cached analytics data')
-          const ageMinutes = Math.floor((Date.now() - new Date(cachedData.created_at).getTime()) / (1000 * 60))
-          return NextResponse.json({
-            success: true,
-            data: cachedData.cache_data,
-            source: 'cache',
-            metadata: {
-              cached_at: cachedData.created_at,
-              age_minutes: ageMinutes
-            }
-          })
-        }
-      } catch (cacheError) {
-        console.log('Cache lookup failed:', cacheError.message)
-      }
-    }
-    
-    // Try to get real data using the new analytics service if we have a user
-    let analyticsData = null
-    if (userId) {
-      try {
-        console.log(`🔍 Getting analytics for user ${userId} (${timeRange})`)
-        analyticsData = await HealthAnalyticsService.getAnalyticsData(userId, timeRange)
-        
-        // Use dashboard service for consistency across entire app
-        try {
-          const dashboardData = await HomepageIntegrationService.getDashboardData(userId)
-          
-          // Use dashboard data as primary source for consistency
-          analyticsData.today_stats = dashboardData.todayStats
-          analyticsData.health_score = {
-            overall_score: dashboardData.wellnessScore.overall_score,
-            trend: dashboardData.wellnessScore.trend,
-            component_scores: dashboardData.wellnessScore.component_scores
-          }
-          
-          // Also use dashboard insights for consistency
-          if (dashboardData.healthInsights && dashboardData.healthInsights.length > 0) {
-            analyticsData.insights = dashboardData.healthInsights
-          }
-          
-          console.log('📊 Using dashboard data as primary source for consistency')
-          console.log('🔄 Health score:', analyticsData.health_score.overall_score)
-        } catch (dashboardError) {
-          console.log('Dashboard data unavailable, using analytics only:', dashboardError.message)
-        }
-        
-        // Add insights if requested - simplified to reduce database calls
-        if (includeInsights) {
-          try {
-            // Only query insights if we don't have them from dashboard data
-            if (!analyticsData.insights || analyticsData.insights.length === 0) {
-              console.log(`🔍 GET: Querying insights for user: ${userId}`)
-              const { data: existingInsights, error: queryError } = await supabaseAdmin
-                .from('health_insights')
-                .select('*')
-                .eq('user_id', userId)
-                .order('generated_at', { ascending: false })
-                .limit(3)
-              
-              console.log('📊 GET Query result:', { 
-                error: queryError, 
-                insightsCount: existingInsights?.length || 0,
-                insights: existingInsights?.map(i => ({ id: i.id, type: i.insight_type, summary: i.insights?.summary }))
-              })
-              
-              if (!queryError && existingInsights && existingInsights.length > 0) {
-                const latestInsight = existingInsights[0]
-                const generatedAt = new Date(latestInsight.generated_at)
-                const hoursSinceGenerated = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60)
-                
-                if (hoursSinceGenerated < 24) {
-                  console.log(`✅ Using existing insights from database (${hoursSinceGenerated.toFixed(1)}h old)`)
-                  analyticsData.insights = existingInsights.map(insight => ({
-                    id: insight.id,
-                    insight_type: insight.insight_type,
-                    generated_at: insight.generated_at,
-                    insights: insight.insights
-                  }))
-                } else {
-                  console.log('📊 Using old insights as fallback')
-                  analyticsData.insights = existingInsights.map(insight => ({
-                    id: insight.id,
-                    insight_type: insight.insight_type,
-                    generated_at: insight.generated_at,
-                    insights: insight.insights
-                  }))
-                }
-              } else {
-                analyticsData.insights = []
-              }
-            } else {
-              console.log('✅ Using insights from dashboard data')
-            }
-          } catch (insightError) {
-            console.error('Failed to get insights from database:', insightError.message)
-            analyticsData.insights = []
-          }
-        }
-        
-        // Health score already set from dashboard data above for consistency
-        
-        console.log('✅ Real analytics data generated successfully')
-      } catch (error) {
-        console.error('Failed to get real analytics data:', error.message)
-        throw error
-      }
-    }
-
-    // Only use real data - no mock fallbacks
-    if (!analyticsData) {
+    if (!userId) {
       return NextResponse.json({
         success: false,
-        error: 'No user authenticated or data unavailable',
+        error: 'User ID is required',
         timestamp: new Date().toISOString()
-      }, { status: 401 })
+      }, { status: 400 })
     }
 
+    try {
+      console.log('🔍 Getting unified analytics data for user:', userId)
+      
+      // use single unified service for all analytics data
+      const analyticsData = await UnifiedAnalyticsService.getUnifiedAnalyticsData(
+        userId, 
+        timeRange, 
+        { 
+          forceRefresh, 
+          includeInsights, 
+          cached 
+        }
+      )
+
+      // return metadata for cached requests
+      if (cached) {
     return NextResponse.json({
       success: true,
       data: analyticsData,
-      source: userId && analyticsData.data_points > 0 ? 'real' : 'mock',
+          metadata: {
+            age_minutes: 1, // always fresh with unified service
+            cached: true
+          },
+          timestamp: new Date().toISOString()
+        })
+      }
+
+      console.log('✅ Unified analytics data generated successfully')
+
+      return NextResponse.json({
+        success: true,
+        data: analyticsData,
+        source: 'unified',
       timestamp: new Date().toISOString(),
       user_authenticated: !!userId,
       insights_available: analyticsData.insights?.length > 0
     })
+    } catch (error) {
+      console.error('Failed to get analytics data:', error.message)
+      return NextResponse.json({
+        success: false,
+        error: error.message || 'Failed to fetch analytics data',
+        timestamp: new Date().toISOString()
+      }, { status: 500 })
+    }
   } catch (error) {
     console.error('Analytics API error:', error)
-            // Return error if no authenticated user
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -236,157 +166,74 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// All data comes from real Supabase sources - no mock/synthetic data
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { insightType = 'on_demand', forceGenerate = false } = body
-    
-    // Get user ID from Authorization header
-    let userId = null
-    try {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7)
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-        if (user && !error) {
-          userId = user.id
-        }
-      }
-    } catch (authError) {
-      console.log('Auth failed for insight generation:', authError.message)
+    const { userId, action, insight_type = 'daily' } = body
+
+    if (!userId) {
+      return NextResponse.json({
+        success: false,
+        error: 'User ID required'
+      }, { status: 400 })
     }
 
-    // Try to generate real insights from user data
-    if (userId) {
+    console.log(`🔧 POST: ${action} for user ${userId}`)
+
+    if (action === 'generate_insights') {
+      // generate health insights
       try {
-        console.log(`🧠 Generating insights for user ${userId}`)
-        
-        // Check if we should use existing insights or generate new ones
-        if (!forceGenerate) {
-          // Check for recent insights (within the last 6 hours for on_demand)
-          const hoursThreshold = insightType === 'on_demand' ? 6 : 24
-          const cutoffTime = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000)
-          
-          console.log(`🔍 Checking for recent insights newer than: ${cutoffTime.toISOString()}`)
-          const { data: recentInsights, error: queryError } = await supabaseAdmin
-          .from('health_insights')
-          .select('*')
-          .eq('user_id', userId)
-            .gte('generated_at', cutoffTime.toISOString())
-          .order('generated_at', { ascending: false })
-          .limit(1)
-        
-          if (!queryError && recentInsights && recentInsights.length > 0) {
-            console.log('✅ Found recent insights in database')
-            const insight = recentInsights[0]
-          return NextResponse.json({
-            success: true,
-            insights: {
-              id: insight.id,
-              insight_type: insight.insight_type,
-              generated_at: insight.generated_at,
-              insights: insight.insights
-            },
-            source: 'database',
-              timestamp: new Date().toISOString()
-            })
-          }
-        }
-        
-        // Generate new insights from real user data
-        console.log('🔄 Generating fresh insights from user data...')
         const { HealthInsightsService } = await import('@/lib/services/health-insights')
+        const insight = await HealthInsightsService.generateHealthInsights(userId, insight_type)
         
-        try {
-          const newInsight = await HealthInsightsService.generateHealthInsights(userId, insightType)
-          
-          console.log('✅ Successfully generated new insights')
-          return NextResponse.json({
-            success: true,
-            insights: {
-              id: newInsight.id || 'generated',
-              insight_type: newInsight.insight_type,
-              generated_at: newInsight.generated_at,
-              insights: newInsight.insights
-            },
-            source: 'generated',
-            timestamp: new Date().toISOString()
-          })
-        } catch (insightError) {
-          console.log('Failed to generate insights, trying basic approach:', insightError.message)
-          
-          // If insights generation fails, try to create a simple one
-          const basicInsight = {
-            id: 'basic_' + Date.now(),
-            insight_type: insightType,
-            generated_at: new Date().toISOString(),
-            insights: {
-              summary: 'Health insights are being prepared. Please complete your profile setup for more personalized analysis.',
-              trends: [],
-              recommendations: [
-                'Complete your profile setup for personalized insights',
-                'Start tracking your health metrics regularly',
-                'Visit the tracking page to log health data'
-              ],
-              achievements: [],
-              correlations: []
-            }
-          }
-          
-          return NextResponse.json({
-            success: true,
-            insights: basicInsight,
-            source: 'basic_generated',
-            timestamp: new Date().toISOString()
-          })
-        }
+        // clear cache to ensure fresh data after insights generation
+        UnifiedAnalyticsService.clearCache(userId)
         
+        return NextResponse.json({
+          success: true,
+          insight,
+          message: 'Insights generated successfully'
+        })
       } catch (error) {
-        console.log('Failed to generate real insights:', error.message)
+        console.error('Failed to generate insights:', error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to generate insights'
+        }, { status: 500 })
+      }
+    } else if (action === 'refresh_wellness_score') {
+      // force refresh wellness score
+      try {
+        const { WellnessScoreService } = await import('@/lib/services/wellness-score')
+        const freshScore = await WellnessScoreService.calculateWellnessScore(userId, '7d', true)
         
-        // Try to get any existing insights as fallback
-        try {
-          const { data: anyInsights, error: fallbackError } = await supabaseAdmin
-            .from('health_insights')
-            .select('*')
-            .eq('user_id', userId)
-            .order('generated_at', { ascending: false })
-            .limit(1)
-          
-          if (!fallbackError && anyInsights && anyInsights.length > 0) {
-            console.log('📋 Using fallback insights from database')
-            const insight = anyInsights[0]
-            return NextResponse.json({
-              success: true,
-              insights: {
-                id: insight.id,
-                insight_type: insight.insight_type,
-                generated_at: insight.generated_at,
-                insights: insight.insights
-              },
-              source: 'database_fallback',
-              timestamp: new Date().toISOString()
-            })
-          }
-        } catch (fallbackError) {
-          console.log('Fallback insights also failed:', fallbackError.message)
-        }
+        // clear cache to ensure fresh data
+        UnifiedAnalyticsService.clearCache(userId)
+        
+        return NextResponse.json({
+          success: true,
+          wellness_score: freshScore,
+          message: 'Wellness score refreshed successfully'
+        })
+      } catch (error) {
+        console.error('Failed to refresh wellness score:', error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to refresh wellness score'
+        }, { status: 500 })
       }
     }
-    
-    // No user authenticated or data available
+
     return NextResponse.json({
       success: false,
-      error: 'No user authenticated or insufficient data for insights generation',
-      timestamp: new Date().toISOString()
-    }, { status: 401 })
+      error: 'Invalid action'
+    }, { status: 400 })
+
   } catch (error) {
-    console.error('Insights generation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate insights' },
-      { status: 500 }
-    )
+    console.error('POST analytics error:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error'
+    }, { status: 500 })
   }
 }

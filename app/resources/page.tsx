@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { useApp, useUser } from "@/lib/store/enhanced-context"
+import { useApp, useUser } from "@/lib/store/safe-context"
 import { ResourceLibrary } from "@/components/resources/resource-library"
 import { AppLogo } from "@/components/app-logo"
 import { ArrowLeft } from "lucide-react"

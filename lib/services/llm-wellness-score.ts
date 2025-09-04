@@ -104,30 +104,20 @@ export class LLMWellnessScoreService {
       // Create prompt for LLM
       const prompt = this.createWellnessScorePrompt(structuredData)
       
-      // Call LLM API
-      console.log('🧠 Calling LLM API for wellness score calculation...')
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: prompt,
-          userId: request.userId,
-          context: 'wellness_score_calculation'
-        })
-      })
-
-      if (!response.ok) {
-        console.error('❌ LLM API error:', response.status)
-        throw new Error(`LLM API error: ${response.status}`)
+      // Use direct LLM services instead of the ask API (which requires Flask backend)
+      console.log('🧠 Calling direct LLM services for wellness score calculation...')
+      
+      const { llmService } = await import('@/lib/llm-services')
+      const llmResponse = await llmService.generateStructuredResponse(prompt)
+      
+      if (!llmResponse.success) {
+        throw new Error(`LLM service error: ${llmResponse.error}`)
       }
 
-      const result = await response.json()
-      console.log('🧠 LLM Response received:', result.content || result.message || '')
+      console.log('🧠 LLM Response received:', llmResponse.content)
       
       // Parse LLM response
-      return this.parseLLMResponse(result.content || result.message || '')
+      return this.parseLLMResponse(llmResponse.content)
       
     } catch (error) {
       console.error('Error generating wellness score with LLM:', error)
@@ -470,9 +460,10 @@ Consider the user's health conditions when calculating scores. Be realistic but 
   private static async getUserHealthConditionsAdmin(userId: string) {
     try {
       const { data, error } = await supabaseAdmin
-        .from('user_health_conditions')
+        .from('health_conditions')
         .select('*')
         .eq('user_id', userId)
+        .eq('is_active', true)
 
       if (error) throw error
       return data || []
@@ -502,11 +493,37 @@ Consider the user's health conditions when calculating scores. Be realistic but 
 
   private static async saveHealthScore(healthScore: HealthScore): Promise<void> {
     try {
+      // First, delete any existing scores for this user and period to avoid constraint conflicts
+      await supabaseAdmin
+        .from('health_scores')
+        .delete()
+        .eq('user_id', healthScore.user_id)
+        .eq('score_period', healthScore.score_period)
+      
+      // Then insert the new score
       const { error } = await supabaseAdmin
         .from('health_scores')
-        .upsert(healthScore)
+        .insert(healthScore)
 
       if (error) throw error
+      console.log('💾 LLM Health score saved to database (replaced existing)')
+      
+      // Also update the user profile wellness score for consistency
+      try {
+        const { error: profileError } = await supabaseAdmin
+          .from('user_profiles')
+          .update({ wellness_score: Math.round(healthScore.overall_score) })
+          .eq('id', healthScore.user_id)
+        
+        if (profileError) {
+          console.warn('Failed to update user profile wellness score:', profileError)
+        } else {
+          console.log('💾 User profile wellness score updated to:', Math.round(healthScore.overall_score))
+        }
+      } catch (profileError) {
+        console.warn('Failed to update user profile wellness score:', profileError)
+      }
+      
     } catch (error) {
       console.error('Error saving health score:', error)
     }

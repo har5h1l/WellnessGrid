@@ -893,9 +893,10 @@ function generateTimeSeriesData(trends: any[], trendsChartData: any[], days = 7)
     // Add data for each trend metric
     trendsChartData.forEach(trend => {
       const metricName = trend.name.toLowerCase()
-      // Simulate some variation around the trend value for demo purposes
+      // Use deterministic variation to avoid hydration mismatches
       // In a real app, this would come from actual historical data
-      const variation = (Math.random() - 0.5) * 0.2 * trend.value
+      const seed = i + metricName.charCodeAt(0) // Deterministic seed based on day and metric
+      const variation = (Math.sin(seed) - 0.5) * 0.2 * trend.value
       dataPoint[metricName] = Math.max(0, trend.value + variation)
     })
     

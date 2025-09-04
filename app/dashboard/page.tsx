@@ -11,10 +11,10 @@ import { AppLogo } from "@/components/app-logo"
 import { MoodTracker } from "@/components/mood-tracker"
 import { SymptomTracker } from "@/components/symptom-tracker"
 import { MedicationLogger } from "@/components/medication-logger"
-import { Activity, Heart, Pill, MessageCircle, TrendingUp, Clock, Bell, AlertTriangle, Target, ChevronRight, Star, Zap, TrendingDown } from "lucide-react"
+import { Activity, Heart, Pill, MessageCircle, TrendingUp, Clock, Bell, AlertTriangle, Target, ChevronRight, Star, Zap, TrendingDown, Moon, Dumbbell } from "lucide-react"
 import Link from "next/link"
 import type { UserProfile, HealthCondition, UserTool, TrackingEntry } from "@/lib/database"
-import { HomepageIntegrationService, DashboardData } from "@/lib/services/homepage-integration"
+// Dashboard uses API endpoints, not direct service imports
 
 // Safe dynamic import for services
 let authHelpers: any = null
@@ -43,8 +43,9 @@ export default function Dashboard() {
   const [conditions, setConditions] = useState<HealthCondition[]>([])
   const [userTools, setUserTools] = useState<UserTool[]>([])
   const [recentEntries, setRecentEntries] = useState<TrackingEntry[]>([])
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [dashboardData, setDashboardData] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
 
   const [showMoodTracker, setShowMoodTracker] = useState(false)
   const [showSymptomTracker, setShowSymptomTracker] = useState(false)
@@ -91,9 +92,14 @@ export default function Dashboard() {
         
         // Load recent tracking entries (optional - may fail if table doesn't exist)
         try {
-          const entries = await DatabaseService.getRecentTrackingEntries(user.id, 3)
+          const entries = await DatabaseService.getRecentTrackingEntries(user.id, 7) // Load 7 days instead of 3
           setRecentEntries(entries)
           console.log('Dashboard: Tracking entries loaded:', entries.length)
+          console.log('Dashboard: Tracking entries details:', entries.map(e => ({
+            tool_id: e.tool_id,
+            timestamp: e.timestamp,
+            date: new Date(e.timestamp).toDateString()
+          })))
         } catch (trackingError) {
           console.log('Dashboard: Tracking entries not available (table may not exist yet):', trackingError.message)
           setRecentEntries([])
@@ -101,12 +107,51 @@ export default function Dashboard() {
 
         // Load integrated dashboard data
         try {
-          const integrated = await HomepageIntegrationService.getDashboardData(user.id)
-          setDashboardData(integrated)
-          console.log('Dashboard: Integrated data loaded')
+          setAnalyticsLoading(true)
+          console.log('🔍 Dashboard: Starting analytics data fetch...')
+          const forceRefresh = searchParams.get("forceRefresh") === "true"
+          if (forceRefresh) {
+            console.log('🔄 Dashboard: Force refresh requested')
+          }
+          
+          // Fetch data from the unified API endpoint
+          const response = await fetch(`/api/analytics?userId=${user.id}&timeRange=30d&includeInsights=true${forceRefresh ? '&forceRefresh=true' : ''}`)
+          const result = await response.json()
+          
+          if (result.success && result.data) {
+            console.log('🔍 Dashboard: Raw API response:', result.data)
+            console.log('🔍 Dashboard: Health score from API:', result.data.health_score)
+            
+            // Map the API response to dashboard data structure
+            const mappedData = {
+              ...result.data,
+              wellnessScore: {
+                overall_score: result.data.health_score?.overall_score || 0,
+                calculated_at: result.data.health_score?.calculated_at,
+                trend: result.data.health_score?.trend || 'stable'
+              },
+              recentAlerts: result.data.alerts || [],
+              healthInsights: result.data.insights || []
+            }
+            
+            console.log('🔍 Dashboard: Mapped wellnessScore:', mappedData.wellnessScore)
+            console.log('🔍 Dashboard: Final mapped data:', mappedData)
+            
+            setDashboardData(mappedData)
+            console.log('Dashboard: Analytics data loaded')
+            console.log('Dashboard: Wellness score:', result.data.health_score?.overall_score)
+            console.log('Dashboard: Wellness score timestamp:', result.data.health_score?.calculated_at)
+            console.log('Dashboard: Force refresh requested:', forceRefresh)
+          } else {
+            console.error('Dashboard: Failed to fetch analytics data:', result.error || 'Unknown error')
+            console.error('Dashboard: Full result:', result)
+            setDashboardData(null)
+          }
         } catch (integrationError) {
           console.log('Dashboard: Failed to load integrated data:', integrationError)
           setDashboardData(null)
+        } finally {
+          setAnalyticsLoading(false)
         }
         
         console.log('Dashboard: User data set successfully')
@@ -121,6 +166,54 @@ export default function Dashboard() {
 
     loadUserData()
   }, [])
+
+  // Separate effect to reload dashboard data when searchParams change (for force refresh)
+  useEffect(() => {
+    console.log('🔄 Dashboard: Force refresh effect triggered, searchParams:', searchParams.toString())
+    const forceRefresh = searchParams.get("forceRefresh") === "true"
+    console.log('🔄 Dashboard: Force refresh value:', forceRefresh, 'currentUser:', !!currentUser)
+    
+    if (forceRefresh && currentUser) {
+      console.log('🔄 Dashboard: Force refresh detected from URL params')
+      const reloadDashboardData = async () => {
+        try {
+          // Fetch fresh data from the unified API endpoint
+          const response = await fetch(`/api/analytics?userId=${currentUser.id}&timeRange=30d&includeInsights=true&forceRefresh=true`)
+          const result = await response.json()
+          
+          if (result.success && result.data) {
+            // Map the API response to dashboard data structure
+            const mappedData = {
+              ...result.data,
+              wellnessScore: {
+                overall_score: result.data.health_score.overall_score,
+                calculated_at: result.data.health_score.calculated_at,
+                trend: result.data.health_score.trend
+              }, // Map health_score to wellnessScore for dashboard compatibility
+              recentAlerts: result.data.alerts || [],
+              healthInsights: result.data.insights || []
+            }
+            setDashboardData(mappedData)
+            console.log('Dashboard: Force refreshed data loaded')
+            console.log('Dashboard: New wellness score:', result.data.health_score.overall_score)
+            console.log('Dashboard: New wellness score timestamp:', result.data.health_score.calculated_at)
+            console.log('Dashboard: Force refresh effect triggered')
+          } else {
+            console.error('Dashboard: Failed to fetch fresh analytics data:', result.error)
+          }
+        } catch (error) {
+          console.error('Dashboard: Failed to force refresh data:', error)
+        }
+      }
+      reloadDashboardData()
+    }
+  }, [searchParams, currentUser])
+
+  const handleForceRefresh = () => {
+    console.log('🔄 Manual force refresh requested')
+    const timestamp = Date.now()
+    window.location.href = `/dashboard?forceRefresh=true&t=${timestamp}`
+  }
 
   // Handle URL parameters for quick actions
   useEffect(() => {
@@ -279,14 +372,168 @@ export default function Dashboard() {
 
   const recommendedActions = getRecommendedActions()
 
-  // Show loading state
-  if (loading) {
+  // Enhanced tool mapping with better preset matching
+  const getRecommendedTools = () => {
+    console.log('🔍 Building recommended tools for user tools:', userTools.length)
+    
+    if (userTools.length === 0) {
+      console.log('🔍 No user tools enabled')
+      return []
+    }
+    
+    return userTools.slice(0, 4).map(userTool => {
+      // Enhanced tool name mapping - more comprehensive approach
+      const toolName = (userTool.tool_name || '').toLowerCase()
+      const toolId = (userTool.tool_id || '').toLowerCase()
+      
+      console.log('🔍 Processing tool:', { id: userTool.tool_id, name: userTool.tool_name })
+      
+      // Smart preset matching based on both name and ID
+      let matchedPreset = null
+      
+      // First try direct ID match
+      matchedPreset = toolPresets.find(tp => tp.id === userTool.tool_id)
+      
+      // If no direct match, try intelligent name-based matching
+      if (!matchedPreset) {
+        if (toolName.includes('mood') || toolName.includes('depression') || toolName.includes('mental')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'mood-tracker')
+        } else if (toolName.includes('glucose') || toolName.includes('blood sugar') || toolName.includes('blood glucose')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'glucose-tracker')
+        } else if (toolName.includes('blood pressure') || toolName.includes('bp monitor') || toolName.includes('pressure monitor')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'blood-pressure-tracker')
+        } else if (toolName.includes('sleep') || toolName.includes('rest')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'sleep-tracker')
+        } else if (toolName.includes('exercise') || toolName.includes('physical') || toolName.includes('activity') || toolName.includes('workout')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'physical-activity-tracker')
+        } else if (toolName.includes('medication') || toolName.includes('pill') || toolName.includes('medicine')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'medication-reminder')
+        } else if (toolName.includes('symptom') || toolName.includes('pain')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'symptom-tracker')
+        } else if (toolName.includes('nutrition') || toolName.includes('food') || toolName.includes('diet')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'nutrition-tracker')
+        } else if (toolName.includes('hydration') || toolName.includes('water')) {
+          matchedPreset = toolPresets.find(tp => tp.id === 'hydration-tracker')
+        }
+      }
+      
+      console.log('🔍 Tool matching result:', {
+        userTool: userTool.tool_name,
+        matchedPreset: matchedPreset?.name || 'None',
+        presetId: matchedPreset?.id || 'None'
+      })
+      
+      // Get appropriate icon based on tool type
+      const getToolIcon = () => {
+        if (toolName.includes('mood') || toolName.includes('depression')) return <Heart className="w-5 h-5 text-white" />
+        if (toolName.includes('glucose') || toolName.includes('blood')) return <Activity className="w-5 h-5 text-white" />
+        if (toolName.includes('sleep')) return <Moon className="w-5 h-5 text-white" />
+        if (toolName.includes('exercise') || toolName.includes('activity')) return <Dumbbell className="w-5 h-5 text-white" />
+        if (toolName.includes('medication') || toolName.includes('pill')) return <Pill className="w-5 h-5 text-white" />
+        if (toolName.includes('symptom') || toolName.includes('pain')) return <AlertTriangle className="w-5 h-5 text-white" />
+        return <Target className="w-5 h-5 text-white" />
+      }
+      
+      // Get appropriate color based on tool type
+      const getToolBgColor = () => {
+        if (toolName.includes('mood') || toolName.includes('depression')) return 'bg-gradient-to-r from-pink-500 to-red-500'
+        if (toolName.includes('glucose') || toolName.includes('blood glucose')) return 'bg-gradient-to-r from-red-500 to-pink-500'
+        if (toolName.includes('blood pressure')) return 'bg-gradient-to-r from-blue-500 to-cyan-500'
+        if (toolName.includes('sleep')) return 'bg-gradient-to-r from-indigo-500 to-purple-500'
+        if (toolName.includes('exercise') || toolName.includes('activity')) return 'bg-gradient-to-r from-green-500 to-teal-500'
+        if (toolName.includes('medication') || toolName.includes('pill')) return 'bg-gradient-to-r from-purple-500 to-indigo-500'
+        if (toolName.includes('symptom') || toolName.includes('pain')) return 'bg-gradient-to-r from-orange-500 to-red-500'
+        return 'bg-gradient-to-r from-blue-500 to-teal-500'
+      }
+      
+      // Generate description based on recent usage
+      const getDescription = () => {
+        const today = new Date().toISOString().split('T')[0]
+        const todayEntries = recentEntries.filter(entry => 
+          entry.tool_id === userTool.tool_id && 
+          entry.timestamp.startsWith(today)
+        )
+        
+        if (todayEntries.length > 0) {
+          return 'Tracked today'
+        }
+        
+        const lastEntry = recentEntries
+          .filter(entry => entry.tool_id === userTool.tool_id)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+        
+        if (lastEntry) {
+          const daysAgo = Math.floor((Date.now() - new Date(lastEntry.timestamp).getTime()) / (1000 * 60 * 60 * 24))
+          return daysAgo === 0 ? 'Tracked today' : `Last tracked ${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`
+        }
+        
+        return 'Ready to track'
+      }
+      
+      return {
+        id: userTool.tool_id,
+        toolId: userTool.tool_id,
+        name: matchedPreset?.name || userTool.tool_name || 'Health Tracker',
+        description: getDescription(),
+        frequency: 'Daily',
+        icon: getToolIcon(),
+        bgColor: getToolBgColor(),
+        priority: 1
+      }
+    }).filter(Boolean)
+  }
+
+  // Test function to debug the recommended tools logic
+  const debugRecommendedTools = () => {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    
+    console.log('🔍 DEBUG: Date comparison test:', {
+      now: now.toISOString(),
+      today: today,
+      userToolsCount: userTools.length,
+      recentEntriesCount: recentEntries.length
+    })
+    
+    userTools.forEach(userTool => {
+      const toolPreset = toolPresets.find(tp => tp.id === userTool.tool_id)
+      if (!toolPreset) return
+      
+      const todayEntries = recentEntries.filter(entry => 
+        entry.tool_id === userTool.tool_id && 
+        entry.timestamp.startsWith(today)
+      )
+      
+      console.log('🔍 DEBUG: Tool analysis:', {
+        toolId: userTool.tool_id,
+        toolName: toolPreset.name,
+        todayEntries: todayEntries.length,
+        allEntriesForTool: recentEntries.filter(e => e.tool_id === userTool.tool_id).length,
+        todayEntriesDetails: todayEntries.map(e => ({
+          timestamp: e.timestamp,
+          date: new Date(e.timestamp).toDateString()
+        }))
+      })
+    })
+  }
+
+  // Call debug function on component mount
+  useEffect(() => {
+    if (!loading && userTools.length > 0) {
+      debugRecommendedTools()
+    }
+  }, [loading, userTools, recentEntries])
+
+  // Show loading state - wait for both user data and analytics
+  if (loading || analyticsLoading) {
     return (
       <div className="min-h-screen wellness-gradient flex items-center justify-center">
         <div className="text-center">
           <AppLogo size="lg" className="mb-4" />
           <div className="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-gray-600 mt-4">Loading your dashboard...</p>
+          <p className="text-gray-600 mt-4">
+            {loading ? "Loading your dashboard..." : "Loading health insights..."}
+          </p>
         </div>
       </div>
     )
@@ -316,6 +563,12 @@ export default function Dashboard() {
   const wellnessScore = dashboardData?.wellnessScore?.overall_score || 0
   const healthInsights = dashboardData?.healthInsights || []
   const trackingStreaks = dashboardData?.trackingStreaks || []
+
+  // Debug log for wellness score consistency
+  console.log('🏠 Dashboard wellness score:', wellnessScore, 'from dashboardData:', dashboardData?.wellnessScore)
+  console.log('🏠 Dashboard data object keys:', dashboardData ? Object.keys(dashboardData) : 'null')
+  console.log('🏠 Dashboard health_score:', dashboardData?.health_score)
+  console.log('🏠 Current timestamp:', new Date().toISOString())
 
   // Placeholder for errors
   const errors = []
@@ -356,13 +609,17 @@ export default function Dashboard() {
         {/* Wellness Circle */}
         <div className="flex justify-center">
           <div className="text-center">
-            <WellnessCircle score={wellnessScore} />
+            <WellnessCircle key={`wellness-${wellnessScore}-${dashboardData?.wellnessScore?.calculated_at}`} score={wellnessScore} />
             <p className="text-sm text-gray-600 mt-2">
               {wellnessScore >= 80
                 ? "You're doing great! 🌟"
                 : wellnessScore >= 60
                   ? "Keep up the good work! 💪"
                   : "Let's work on feeling better 💙"}
+            </p>
+            {/* Debug info - remove in production */}
+            <p className="text-xs text-gray-400 mt-1">
+              Last updated: {dashboardData?.health_score?.calculated_at ? new Date(dashboardData.health_score.calculated_at).toLocaleTimeString() : 'Unknown'}
             </p>
           </div>
         </div>
@@ -394,56 +651,91 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Health Alerts */}
-        {unreadAlerts.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Health Alerts</h3>
-              <Badge variant="destructive" className="text-xs">
-                {unreadAlerts.length} alert{unreadAlerts.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-
-            <div className="space-y-2">
-              {unreadAlerts.slice(0, 3).map((alert) => (
-                <Card key={alert.id} className="wellness-card border-l-4 border-l-red-500">
-                  <CardContent className="p-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          alert.severity === 'critical' ? 'bg-red-100' : 
-                          alert.severity === 'high' ? 'bg-orange-100' : 'bg-yellow-100'
-                        }`}>
-                          <AlertTriangle className={`w-4 h-4 ${
-                            alert.severity === 'critical' ? 'text-red-500' : 
-                            alert.severity === 'high' ? 'text-orange-500' : 'text-yellow-500'
-                          }`} />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 text-sm">{alert.title}</h4>
-                          <p className="text-xs text-gray-600 mt-1">{alert.message}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(alert.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {unreadAlerts.length > 3 && (
-                <Link href="/notifications">
-                  <Button variant="outline" size="sm" className="w-full">
-                    View all {unreadAlerts.length} alerts
-                  </Button>
-                </Link>
-              )}
-            </div>
+        {/* Recommended Tools Section - Based on your conditions and tracking patterns */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900">Recommended Tools</h3>
+            <Badge variant="outline" className="text-xs">
+              {userTools.length > 0 ? 'Track today' : 'Get started'}
+            </Badge>
           </div>
-        )}
 
-        {/* Health Insights Summary */}
+          <div className="space-y-2">
+            {(() => {
+              const recommendedTools = getRecommendedTools()
+              console.log('🔍 UI rendering recommended tools:', {
+                count: recommendedTools.length,
+                tools: recommendedTools.map(t => t.name)
+              })
+              
+              if (recommendedTools.length > 0) {
+                return recommendedTools.map((tool) => (
+                  <Card key={tool.id} className="wellness-card hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tool.bgColor}`}>
+                            {tool.icon}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">{tool.name}</h4>
+                            <p className="text-sm text-gray-600">{tool.description}</p>
+                            <p className="text-xs text-blue-600 mt-1">{tool.frequency}</p>
+                          </div>
+                        </div>
+                        <Link href={`/track/${tool.toolId}`}>
+                          <Button size="sm" className="wellness-button-primary min-w-[80px]">
+                            Track
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              } else if (userTools.length === 0) {
+                // No tools enabled yet
+                return (
+                  <Card className="wellness-card">
+                    <CardContent className="p-4 text-center">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                        <Target className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-1">Set Up Your Tools</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Enable health tracking tools to monitor your conditions
+                      </p>
+                      <Link href="/profile/tools">
+                        <Button size="sm" className="wellness-button-primary">
+                          Choose Tools
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                )
+              } else {
+                // All tools have been tracked today
+                return (
+                  <Card className="wellness-card">
+                    <CardContent className="p-4 text-center">
+                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                        <Star className="w-6 h-6 text-green-500" />
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-1">Great job!</h4>
+                      <p className="text-sm text-gray-600 mb-1">
+                        You've completed all your tracking for today
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Check back later for your next reminders
+                      </p>
+                    </CardContent>
+                  </Card>
+                )
+              }
+            })()}
+          </div>
+        </div>
+
+        {/* Recent Insights - Improved formatting */}
         {healthInsights.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -455,51 +747,72 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {healthInsights.slice(0, 3).map((insight, index) => {
+            <div className="space-y-2">
+              {healthInsights.slice(0, 2).map((insight, index) => {
                 const insights = insight.insights || {}
-                const trends = insights.trends || []
+                const summary = insights.summary || 'Health insight available'
                 const recommendations = insights.recommendations || []
                 const concerns = insights.concerns || []
                 
                 return (
-                  <Card key={insight.id || index} className="wellness-card">
-                    <CardContent className="p-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100">
-                            <Star className="w-4 h-4 text-blue-500" />
+                  <Link key={insight.id || index} href="/insights">
+                    <Card className="wellness-card hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
+                            <Star className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 text-sm">
-                              {insights.summary || `${insight.insight_type} insights`}
+                            <h4 className="font-medium text-gray-900 text-sm mb-2">
+                              {summary}
                             </h4>
-                            <div className="flex items-center gap-3 mt-1">
-                              {trends.length > 0 && (
-                                <span className="text-xs text-green-600">
-                                  {trends.length} trend{trends.length !== 1 ? 's' : ''}
-                                </span>
-                              )}
-                              {recommendations.length > 0 && (
-                                <span className="text-xs text-blue-600">
-                                  {recommendations.length} tip{recommendations.length !== 1 ? 's' : ''}
-                                </span>
-                              )}
+                            {recommendations.length > 0 && (
+                              <p className="text-xs text-gray-600 mb-2">
+                                💡 {recommendations[0]}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-blue-600">
+                                {recommendations.length} recommendation{recommendations.length !== 1 ? 's' : ''}
+                              </span>
                               {concerns.length > 0 && (
-                                <span className="text-xs text-orange-600">
-                                  {concerns.length} alert{concerns.length !== 1 ? 's' : ''}
+                                <span className="text-orange-600">
+                                  • {concerns.length} concern{concerns.length !== 1 ? 's' : ''}
                                 </span>
                               )}
+                              <span className="text-gray-400 ml-auto">
+                                {new Date(insight.generated_at).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 )
               })}
             </div>
+            
+            {/* Insufficient data message */}
+            {healthInsights.length === 0 && (
+              <Card className="wellness-card">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                    <TrendingUp className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <h4 className="font-medium text-gray-900 mb-1">Building Your Health Profile</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Continue tracking your health metrics to get personalized insights
+                  </p>
+                  <Link href="/insights">
+                    <Button variant="outline" size="sm">
+                      View Insights Page
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
@@ -578,61 +891,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Your Active Tools */}
-        {userTools.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Your active tools</h3>
-              <Link href="/profile/tools">
-                <Button variant="ghost" size="sm" className="text-blue-600">
-                  Manage
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {userTools.slice(0, 4).map((userTool) => {
-                const toolPreset = toolPresets.find(tp => tp.id === userTool.tool_id)
-                if (!toolPreset) return null
-
-                const todayEntries = recentEntries.filter(entry => 
-                  entry.tool_id === userTool.tool_id && 
-                  entry.timestamp.startsWith(new Date().toISOString().split('T')[0])
-                )
-
-                return (
-                  <Link key={userTool.id} href={`/track/${toolPreset.id}`}>
-                    <Card className="wellness-card hover:shadow-md transition-shadow">
-                      <CardContent className="p-3">
-                        <div className="text-center space-y-2">
-                          <div className="w-8 h-8 mx-auto bg-blue-100 rounded-lg flex items-center justify-center">
-                            {toolPreset.type === 'mood_tracker' && <Heart className="w-4 h-4 text-blue-600" />}
-                            {toolPreset.type === 'symptom_tracker' && <AlertTriangle className="w-4 h-4 text-orange-600" />}
-                            {toolPreset.type === 'medication_reminder' && <Pill className="w-4 h-4 text-purple-600" />}
-                            {toolPreset.type === 'glucose_tracker' && <Activity className="w-4 h-4 text-red-600" />}
-                            {toolPreset.type === 'exercise_tracker' && <TrendingUp className="w-4 h-4 text-green-600" />}
-                            {toolPreset.type === 'custom' && <Target className="w-4 h-4 text-blue-600" />}
-                            {!['mood_tracker', 'symptom_tracker', 'medication_reminder', 'glucose_tracker', 'exercise_tracker', 'custom'].includes(toolPreset.type) && 
-                              <Activity className="w-4 h-4 text-blue-600" />}
-                          </div>
-                          <h4 className="font-medium text-sm text-gray-900 line-clamp-2">{toolPreset.name}</h4>
-                          <div className="flex items-center justify-center gap-1">
-                            <div className={`w-2 h-2 rounded-full ${
-                              todayEntries.length > 0 ? 'bg-green-500' : 'bg-gray-300'
-                            }`}></div>
-                            <span className="text-xs text-gray-600">
-                              {todayEntries.length > 0 ? 'Tracked today' : 'Not tracked'}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Quick Action Buttons */}
         <div className="space-y-3">
@@ -740,28 +998,80 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/track" className="w-full">
-            <Card className="wellness-card hover:shadow-md transition-shadow h-full">
-              <CardContent className="p-4 text-center">
-                <TrendingUp className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-900">View Trends</h4>
-                <p className="text-xs text-gray-600">See your progress</p>
-              </CardContent>
-            </Card>
-          </Link>
+        {/* Quick Navigation Links */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-gray-900">Explore</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/insights" className="w-full">
+              <Card className="wellness-card hover:shadow-md transition-shadow h-full">
+                <CardContent className="p-4 text-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-2">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900">Health Analytics</h4>
+                  <p className="text-xs text-gray-600">Detailed insights & trends</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          <Link href="/insights" className="w-full">
-            <Card className="wellness-card hover:shadow-md transition-shadow h-full">
-              <CardContent className="p-4 text-center">
-                <Activity className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-900">Health Data</h4>
-                <p className="text-xs text-gray-600">Detailed insights</p>
+            <Link href="/track" className="w-full">
+              <Card className="wellness-card hover:shadow-md transition-shadow h-full">
+                <CardContent className="p-4 text-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center mx-auto mb-2">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900">Track Health</h4>
+                  <p className="text-xs text-gray-600">Log your metrics</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        {/* Debug Section - Remove this after fixing the issue */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Debug Info</h3>
+              <Badge variant="outline" className="text-xs">
+                Development Only
+              </Badge>
+            </div>
+            
+            <Card className="wellness-card">
+              <CardContent className="p-4">
+                <div className="space-y-2 text-sm">
+                  <div><strong>User Tools:</strong> {userTools.length}</div>
+                  <div><strong>Recent Entries:</strong> {recentEntries.length}</div>
+                  <div><strong>Today:</strong> {new Date().toISOString().split('T')[0]}</div>
+                  <div><strong>Recommended Tools Count:</strong> {getRecommendedTools().length}</div>
+                  <div><strong>Available Tool Presets:</strong> {toolPresets.length}</div>
+                  
+                  <details className="mt-4">
+                    <summary className="cursor-pointer font-medium">User Tools Details</summary>
+                    <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                      {JSON.stringify(userTools.map(t => ({ id: t.tool_id, name: t.tool_name, enabled: t.is_enabled })), null, 2)}
+                    </pre>
+                  </details>
+                  
+                  <details className="mt-2">
+                    <summary className="cursor-pointer font-medium">Recent Entries Details</summary>
+                    <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                      {JSON.stringify(recentEntries.map(e => ({ tool_id: e.tool_id, timestamp: e.timestamp, date: new Date(e.timestamp).toDateString() })), null, 2)}
+                    </pre>
+                  </details>
+                  
+                  <details className="mt-2">
+                    <summary className="cursor-pointer font-medium">Available Tool Presets</summary>
+                    <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                      {JSON.stringify(toolPresets.map(tp => ({ id: tp.id, name: tp.name, type: tp.type })), null, 2)}
+                    </pre>
+                  </details>
+                </div>
               </CardContent>
             </Card>
-          </Link>
-        </div>
+          </div>
+        )}
 
 
       </main>

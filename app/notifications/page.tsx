@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { useApp, useUser } from "@/lib/store/enhanced-context"
+import { useApp, useUser } from "@/lib/store/safe-context"
 import { AppLogo } from "@/components/app-logo"
 import { ArrowLeft, Bell, Clock, Pill, Heart, Calendar, AlertCircle, CheckCircle } from "lucide-react"
 

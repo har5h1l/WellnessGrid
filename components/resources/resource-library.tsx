@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useApp } from "@/lib/store/enhanced-context"
+import { useApp } from "@/lib/store/safe-context"
 import { Search, BookOpen, Video, FileText, ExternalLink, Clock, Star } from "lucide-react"
 import type { Resource } from "@/lib/types"
 

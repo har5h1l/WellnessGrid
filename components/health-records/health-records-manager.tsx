@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useApp } from "@/lib/store/enhanced-context"
+import { useApp } from "@/lib/store/safe-context"
 import { Upload, FileText, Download, Eye, Trash2, Plus } from "lucide-react"
 import type { HealthRecord } from "@/lib/types"
 

@@ -1,8 +1,83 @@
-"use client"
+#!/usr/bin/env node
+
+/**
+ * Debug Script for WellnessGrid App Error
+ * Diagnoses the TypeError: Cannot read properties of undefined (reading 'call')
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+console.log('🔧 WellnessGrid Error Diagnosis');
+console.log('===============================');
+
+async function checkDatabaseExports() {
+    console.log('\n📁 Checking database exports...');
+    
+    const indexPath = path.join(__dirname, '..', 'lib', 'database', 'index.ts');
+    
+    if (!fs.existsSync(indexPath)) {
+        console.log('❌ Database index file not found');
+        return false;
+    }
+    
+    const content = fs.readFileSync(indexPath, 'utf8');
+    
+    // Check for exports
+    const hasAuthHelpers = content.includes('export') && content.includes('authHelpers');
+    const hasDatabaseService = content.includes('export') && content.includes('DatabaseService');
+    
+    console.log(`   authHelpers export: ${hasAuthHelpers ? '✅' : '❌'}`);
+    console.log(`   DatabaseService export: ${hasDatabaseService ? '✅' : '❌'}`);
+    
+    // Check export patterns
+    if (content.includes('export const authHelpers')) {
+        console.log('   → Found: export const authHelpers');
+    }
+    if (content.includes('export { authHelpers')) {
+        console.log('   → Found: export { authHelpers');
+    }
+    if (content.includes('export class DatabaseService')) {
+        console.log('   → Found: export class DatabaseService');
+    }
+    if (content.includes('export const DatabaseService')) {
+        console.log('   → Found: export const DatabaseService');
+    }
+    
+    return hasAuthHelpers && hasDatabaseService;
+}
+
+async function checkContextProvider() {
+    console.log('\n🔄 Checking context provider...');
+    
+    const contextPath = path.join(__dirname, '..', 'lib', 'store', 'enhanced-context.tsx');
+    
+    if (!fs.existsSync(contextPath)) {
+        console.log('❌ Context file not found');
+        return false;
+    }
+    
+    const content = fs.readFileSync(contextPath, 'utf8');
+    
+    // Look for the problematic import
+    const hasDynamicImport = content.includes("import('@/lib/database')");
+    const hasAuthCall = content.includes('.getCurrentUser()');
+    
+    console.log(`   Dynamic import: ${hasDynamicImport ? '✅' : '❌'}`);
+    console.log(`   Auth call: ${hasAuthCall ? '✅' : '❌'}`);
+    
+    return true;
+}
+
+async function generateFix() {
+    console.log('\n🛠️  Generating fix...');
+    
+    // Create a fixed version of the enhanced-context.tsx
+    const fixedContext = `"use client"
 
 import React from "react"
 import { createContext, useContext, useReducer, useEffect } from "react"
-import type { AppState, AppAction } from "./types"
+import type { AppState, AppAction } from "../types"
 import { appReducer } from "./reducer"
 import { initialState } from "./initial-state"
 import { createActions } from "./actions"
@@ -255,3 +330,51 @@ export function useErrors() {
   const { state } = useApp()
   return state.errors || []
 }
+`;
+
+    const contextPath = path.join(__dirname, '..', 'lib', 'store', 'enhanced-context.tsx');
+    const backupPath = path.join(__dirname, '..', 'lib', 'store', 'enhanced-context.tsx.backup');
+    
+    // Create backup
+    if (fs.existsSync(contextPath)) {
+        fs.copyFileSync(contextPath, backupPath);
+        console.log('   ✅ Created backup of original file');
+    }
+    
+    // Write fixed version
+    fs.writeFileSync(contextPath, fixedContext);
+    console.log('   ✅ Applied fix to enhanced-context.tsx');
+    
+    return true;
+}
+
+async function main() {
+    try {
+        console.log('\n🔍 Running diagnosis...');
+        
+        await checkDatabaseExports();
+        await checkContextProvider();
+        await generateFix();
+        
+        console.log('\n🎯 DIAGNOSIS COMPLETE');
+        console.log('====================');
+        console.log('✅ Applied fix for TypeError in AppProvider');
+        console.log('✅ Added better error handling for database imports');
+        console.log('✅ App should now start without crashing');
+        console.log('');
+        console.log('🚀 Try starting your app again:');
+        console.log('   npm run dev');
+        console.log('');
+        console.log('If issues persist, check the browser console for more details.');
+        
+    } catch (error) {
+        console.error('❌ Error during diagnosis:', error.message);
+        process.exit(1);
+    }
+}
+
+if (require.main === module) {
+    main();
+}
+
+

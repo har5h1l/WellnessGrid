@@ -52,16 +52,22 @@ export class CorrelationFilterService {
       // Create prompt for LLM analysis
       const prompt = this.createFilterPrompt(correlationData)
       
-      // Call LLM API
-      const response = await fetch('/api/ask', {
+      // Call LLM API with proper URL handling for server-side context
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const apiUrl = `${baseUrl}/api/ask`
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: prompt,
-          userId: userId,
-          context: 'correlation_filtering'
+          query: prompt,
+          sessionId: `correlation_filter_${Date.now()}`,
+          userContext: {
+            userId: userId,
+            context: 'correlation_filtering'
+          }
         })
       })
 

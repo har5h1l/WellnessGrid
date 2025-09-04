@@ -61,8 +61,8 @@ export class HealthAnalyticsService {
         this.calculateStreaks(userId, entries)
       ])
 
-      // Calculate health score using LLM-based wellness score service
-      const healthScore = await WellnessScoreService.calculateWellnessScore(userId, timeRange)
+      // Calculate health score using LLM-based wellness score service for consistency
+      const healthScore = await WellnessScoreService.calculateWellnessScore(userId, '7d', false)
 
       const analyticsData: AnalyticsData = {
         trends,
@@ -149,14 +149,10 @@ export class HealthAnalyticsService {
     }
 
     return {
-      metric_name: 'glucose',
-      trend_direction: trendDirection,
+      date: new Date().toISOString(),
       value: Math.round(avgLevel),
-      confidence,
-      variance: Math.round(variance),
-      data_points: levels.length,
-      time_period: `${levels.length} readings`,
-      slope: trend
+      tool_id: 'glucose-tracker',
+      metric: 'glucose_level'
     }
   }
 
@@ -183,13 +179,10 @@ export class HealthAnalyticsService {
     }
 
     return {
-      metric_name: 'mood',
-      trend_direction: trendDirection,
+      date: new Date().toISOString(),
       value: Math.round(avgRating * 10) / 10,
-      confidence,
-      data_points: ratings.length,
-      time_period: `${ratings.length} entries`,
-      slope: trend
+      tool_id: 'mood-tracker',
+      metric: 'mood_rating'
     }
   }
 
@@ -216,13 +209,10 @@ export class HealthAnalyticsService {
     }
 
     return {
-      metric_name: 'sleep',
-      trend_direction: trendDirection,
+      date: new Date().toISOString(),
       value: Math.round(avgHours * 10) / 10,
-      confidence,
-      data_points: hours.length,
-      time_period: `${hours.length} nights`,
-      slope: trend
+      tool_id: 'sleep-tracker',
+      metric: 'hours_slept'
     }
   }
 
@@ -688,77 +678,7 @@ export class HealthAnalyticsService {
     }
   }
 
-  private static calculateHealthScore(trends: HealthTrend[], dataPoints: number): HealthScore {
-    let overallScore = 50 // Base score
-    const componentScores: Record<string, number> = {}
 
-    // Score each trend component
-    trends.forEach(trend => {
-      let score = 50 // Base component score
-      
-      switch (trend.metric_name) {
-        case 'glucose':
-          if (trend.trend_direction === 'stable' && trend.value >= 80 && trend.value <= 140) score = 85
-          else if (trend.trend_direction === 'improving') score = 80
-          else if (trend.trend_direction === 'concerning') score = 30
-          break
-          
-        case 'mood':
-          if (trend.trend_direction === 'improving' || (trend.value >= 7 && trend.trend_direction === 'stable')) score = 85
-          else if (trend.trend_direction === 'stable' && trend.value >= 5) score = 70
-          else if (trend.trend_direction === 'declining') score = 40
-          break
-          
-        case 'sleep':
-          if (trend.trend_direction === 'good') score = 85
-          else if (trend.trend_direction === 'stable' && trend.value >= 7) score = 75
-          else if (trend.trend_direction === 'concerning') score = 35
-          break
-          
-        case 'exercise':
-          if (trend.trend_direction === 'excellent') score = 90
-          else if (trend.trend_direction === 'good') score = 80
-          else if (trend.trend_direction === 'moderate') score = 65
-          else if (trend.trend_direction === 'low') score = 45
-          break
-      }
-
-      componentScores[trend.metric_name] = score
-      
-      // Weight the overall score by confidence and data availability
-      const weight = trend.confidence * (trend.data_points / Math.max(trend.data_points, 10))
-      overallScore += (score - 50) * weight * 0.4
-    })
-
-    // Data consistency bonus
-    if (dataPoints > 20) overallScore += 5
-    if (dataPoints > 50) overallScore += 5
-
-    overallScore = Math.max(0, Math.min(100, Math.round(overallScore)))
-
-    // Determine trend
-    let trend: 'improving' | 'stable' | 'declining' | 'insufficient_data'
-    if (dataPoints < 5) {
-      trend = 'insufficient_data'
-    } else if (overallScore >= 75) {
-      trend = 'improving'
-    } else if (overallScore >= 60) {
-      trend = 'stable'
-    } else {
-      trend = 'declining'
-    }
-
-    return {
-      id: `score_${Date.now()}`,
-      user_id: '', // Will be set by caller
-      overall_score: overallScore,
-      component_scores: componentScores,
-      trend,
-      score_period: '30d',
-      calculated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
-    }
-  }
 
   private static async getCachedAnalytics(userId: string, timeRange: string): Promise<AnalyticsData | null> {
     try {

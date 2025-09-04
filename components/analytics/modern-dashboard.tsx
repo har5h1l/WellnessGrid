@@ -194,7 +194,7 @@ export function ModernDashboard({
     date.setDate(date.getDate() - i)
     
     const dayData: any = {
-      date: date.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       baseline: 50
     }
     
@@ -204,7 +204,7 @@ export function ModernDashboard({
       
       // Create more realistic progression over time
       const progressFactor = (daysToShow - i) / daysToShow // 0 to 1 over the time period
-      const randomVariation = (Math.random() - 0.5) * 0.15 * baseValue // ±7.5% random variation
+      const deterministicVariation = (Math.sin(i + trendIndex * 7) - 0.5) * 0.15 * baseValue // ±7.5% deterministic variation
       
       // Add trend direction influence
       let trendInfluence = 0
@@ -214,7 +214,7 @@ export function ModernDashboard({
         trendInfluence = -baseValue * 0.1 * progressFactor // Gradual decline
       }
       
-      const adjustedValue = Math.max(0, baseValue + randomVariation + trendInfluence)
+      const adjustedValue = Math.max(0, baseValue + deterministicVariation + trendInfluence)
       dayData[trend.metric_name] = Math.round(adjustedValue * 10) / 10
     })
     

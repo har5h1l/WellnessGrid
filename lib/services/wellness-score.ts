@@ -34,9 +34,37 @@ export class WellnessScoreService {
    */
   static async calculateWellnessScore(
     userId: string, 
-    scorePeriod: string = '7d'
+    scorePeriod: string = '7d',
+    forceRefresh: boolean = false
   ): Promise<HealthScore> {
-    console.log(`🧠 Calculating LLM-based wellness score for user ${userId} (${scorePeriod})`)
+    console.log(`🧠 Calculating wellness score for user ${userId} (${scorePeriod})${forceRefresh ? ' [FORCE REFRESH]' : ''}`)
+    
+    // If not force refreshing, check for recent score first
+    if (!forceRefresh) {
+      const latestScore = await this.getLatestHealthScore(userId, scorePeriod)
+      if (latestScore) {
+        const scoreAge = (Date.now() - new Date(latestScore.calculated_at).getTime()) / 60000 // minutes
+        if (scoreAge < 30) { // Use same 30-minute threshold as unified service
+          console.log(`✅ Using cached score: ${latestScore.overall_score} (age: ${Math.round(scoreAge)} minutes)`)
+          return latestScore
+        }
+      }
+    }
+    
+    // Clear cached data if force refresh is requested
+    if (forceRefresh) {
+      try {
+        const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+        await client
+          .from('health_scores')
+          .delete()
+          .eq('user_id', userId)
+          .eq('score_period', scorePeriod)
+        console.log('🗑️ Cleared cached wellness scores for force refresh')
+      } catch (error) {
+        console.log('Failed to clear cached wellness scores:', error)
+      }
+    }
     
     try {
       // Use LLM-based wellness score service
@@ -684,14 +712,38 @@ export class WellnessScoreService {
     try {
       // Use admin client if available (server-side), otherwise use regular client  
       const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+      
+      // First, delete any existing scores for this user and period to avoid constraint conflicts
+      await client
+        .from('health_scores')
+        .delete()
+        .eq('user_id', healthScore.user_id)
+        .eq('score_period', healthScore.score_period)
+      
+      // Then insert the new score
       const { error } = await client
         .from('health_scores')
-        .upsert(healthScore, {
-          onConflict: 'user_id,score_period'
-        })
+        .insert(healthScore)
 
       if (error) throw error
-      console.log('💾 Health score saved to database')
+      console.log('💾 Health score saved to database (replaced existing)')
+      
+      // Also update the user profile wellness score for consistency
+      try {
+        const { error: profileError } = await client
+          .from('user_profiles')
+          .update({ wellness_score: Math.round(healthScore.overall_score) })
+          .eq('id', healthScore.user_id)
+        
+        if (profileError) {
+          console.warn('Failed to update user profile wellness score:', profileError)
+        } else {
+          console.log('💾 User profile wellness score updated to:', Math.round(healthScore.overall_score))
+        }
+      } catch (profileError) {
+        console.warn('Failed to update user profile wellness score:', profileError)
+      }
+      
     } catch (error) {
       console.error('Error saving health score:', error)
     }
@@ -706,7 +758,10 @@ export class WellnessScoreService {
     limit: number = 30
   ): Promise<HealthScore[]> {
     try {
-      const { data, error } = await supabase
+      // Use admin client if available (server-side), otherwise use regular client
+      const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+      
+      const { data, error } = await client
         .from('health_scores')
         .select('*')
         .eq('user_id', userId)
@@ -730,7 +785,10 @@ export class WellnessScoreService {
     scorePeriod: string = '7d'
   ): Promise<HealthScore | null> {
     try {
-      const { data, error } = await supabase
+      // Use admin client if available (server-side), otherwise use regular client
+      const client = supabaseAdmin || (await import('@/lib/supabase')).supabase
+      
+      const { data, error } = await client
         .from('health_scores')
         .select('*')
         .eq('user_id', userId)

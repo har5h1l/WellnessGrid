@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -105,6 +105,7 @@ export function EnhancedDashboard({
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d')
   const [activeTab, setActiveTab] = useState('trends')
   const [insightsExpanded, setInsightsExpanded] = useState(false)
+  const [selectedTrendMetric, setSelectedTrendMetric] = useState<string>('all')
 
   // Core metrics with safe defaults
   const healthScore = analyticsData?.health_score?.overall_score || 0
@@ -112,14 +113,54 @@ export function EnhancedDashboard({
   const scoreContext = getHealthScoreContext(healthScore)
   const ScoreIcon = scoreContext.icon
 
-  // Calculate meaningful metrics
-  const activeStreaks = analyticsData?.streaks?.filter(s => s.current_streak > 0) || []
-  const trends = analyticsData?.trends || []
-  const improvingMetrics = trends.filter(t => 
-    t.trend_direction === 'improving' || t.trend_direction === 'good'
+  // Debug log for wellness score consistency
+  console.log('📊 Insights health score:', healthScore, 'from analyticsData:', analyticsData?.health_score)
+
+  // Force refresh wellness score function
+  const forceRefreshWellnessScore = async () => {
+    try {
+      const response = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          action: 'refresh_wellness_score'
+        })
+      })
+      
+      const result = await response.json()
+      if (result.success) {
+        console.log('🔄 Wellness score refreshed:', result.wellness_score.overall_score)
+        // Reload the page to show updated score
+        window.location.reload()
+      } else {
+        console.error('Failed to refresh wellness score:', result.error)
+      }
+    } catch (error) {
+      console.error('Error refreshing wellness score:', error)
+    }
+  }
+
+  // Calculate meaningful metrics - memoized to prevent recreation on every render
+  const activeStreaks = useMemo(() => 
+    analyticsData?.streaks?.filter(s => s.current_streak > 0) || [], 
+    [analyticsData?.streaks]
   )
-  const concerningMetrics = trends.filter(t => 
-    t.trend_direction === 'declining' || t.trend_direction === 'concerning'
+  const trends = useMemo(() => 
+    analyticsData?.trends || [], 
+    [analyticsData?.trends]
+  )
+  const improvingMetrics = useMemo(() => 
+    trends.filter(t => 
+      t.trend_direction === 'improving' || t.trend_direction === 'good'
+    ), 
+    [trends]
+  )
+  const concerningMetrics = useMemo(() => 
+    trends.filter(t => 
+      t.trend_direction === 'declining' || t.trend_direction === 'concerning'
+    ), 
+    [trends]
   )
   
   // Get consolidated daily focus from insights
@@ -181,59 +222,87 @@ export function EnhancedDashboard({
   }
 
   // Format data for visualizations - Show component scores as actual scores, not percentages
-  const healthScoreBreakdown = analyticsData?.health_score?.component_scores ? 
-    Object.entries(analyticsData.health_score.component_scores).map(([key, value]) => ({
-      name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
-      value: value as number,
-      score: value as number, // Use 'score' instead of 'percentage' for clarity
-      color: {
-        glucose: COLORS.danger,
-        mood: COLORS.info,
-        sleep: COLORS.primary,
-        exercise: COLORS.success,
-        nutrition: COLORS.warning
-      }[key] || COLORS.neutral
-    })) : []
+  const healthScoreBreakdown = useMemo(() => {
+    return analyticsData?.health_score?.component_scores ? 
+      Object.entries(analyticsData.health_score.component_scores).map(([key, value]) => ({
+        name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+        value: value as number,
+        score: value as number, // Use 'score' instead of 'percentage' for clarity
+        color: {
+          glucose: COLORS.danger,
+          mood: COLORS.info,
+          sleep: COLORS.primary,
+          exercise: COLORS.success,
+          nutrition: COLORS.warning
+        }[key] || COLORS.neutral
+      })) : []
+  }, [analyticsData?.health_score?.component_scores])
 
   // Format trend data for visualization - Create comprehensive time series for all metrics
-  const trendData = []
-  const daysToShow = 7
-  
-  // Create data points for each day
-  for (let i = daysToShow - 1; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
+  const trendData = useMemo(() => {
+    const data = []
+    const daysToShow = 7
     
-    const dayData: any = {
-      date: date.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
-      baseline: 50
-    }
+    // Filter trends based on selected metric
+    const filteredTrends = selectedTrendMetric === 'all' 
+      ? trends.slice(0, 3) // Limit to 3 most important metrics when showing all
+      : trends.filter(t => t.metric_name === selectedTrendMetric)
     
-    // Add data for each metric with realistic variation
-    trends.forEach((trend, trendIndex) => {
-      const baseValue = trend.value || 0
+    // Create data points for each day
+    for (let i = daysToShow - 1; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
       
-      // Create more realistic progression over time
-      const progressFactor = (daysToShow - i) / daysToShow // 0 to 1 over the time period
-      const randomVariation = (Math.random() - 0.5) * 0.15 * baseValue // ±7.5% random variation
-      
-      // Add trend direction influence
-      let trendInfluence = 0
-      if (trend.trend_direction === 'improving' || trend.trend_direction === 'excellent') {
-        trendInfluence = baseValue * 0.1 * progressFactor // Gradual improvement
-      } else if (trend.trend_direction === 'declining' || trend.trend_direction === 'concerning') {
-        trendInfluence = -baseValue * 0.1 * progressFactor // Gradual decline
+      const dayData: any = {
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        baseline: 50
       }
       
-      const adjustedValue = Math.max(0, baseValue + randomVariation + trendInfluence)
-      dayData[trend.metric_name] = Math.round(adjustedValue * 10) / 10
-    })
+      // Add data for each metric with deterministic variation
+      filteredTrends.forEach((trend, trendIndex) => {
+        const baseValue = trend.value || 0
+        
+        // Create more realistic progression over time
+        const progressFactor = (daysToShow - i) / daysToShow // 0 to 1 over the time period
+        
+        // Use deterministic variation based on day index and trend index to avoid random changes
+        const seed = i + trendIndex * 7 // Deterministic seed
+        const deterministicVariation = (Math.sin(seed) * 0.15 * baseValue) // ±7.5% deterministic variation
+        
+        // Add trend direction influence
+        let trendInfluence = 0
+        if (trend.trend_direction === 'improving' || trend.trend_direction === 'excellent') {
+          trendInfluence = baseValue * 0.1 * progressFactor // Gradual improvement
+        } else if (trend.trend_direction === 'declining' || trend.trend_direction === 'concerning') {
+          trendInfluence = -baseValue * 0.1 * progressFactor // Gradual decline
+        }
+        
+        const adjustedValue = Math.max(0, baseValue + deterministicVariation + trendInfluence)
+        dayData[trend.metric_name] = Math.round(adjustedValue * 10) / 10
+      })
+      
+      data.push(dayData)
+    }
     
-    trendData.push(dayData)
-  }
+    return data
+  }, [trends, selectedTrendMetric])
+
+  // Available metrics for trend selection
+  const availableMetrics = useMemo(() => {
+    const metrics = ['all', ...trends.map(t => t.metric_name)]
+    return [...new Set(metrics)] // Remove duplicates
+  }, [trends])
+
+  // Filter correlations to show only significant ones
+  const significantCorrelations = useMemo(() => {
+    return analyticsData?.correlations?.filter(correlation => {
+      const strength = Math.abs(correlation.correlation)
+      return strength >= 0.3 // Only show correlations with 30% or higher strength
+    }) || []
+  }, [analyticsData?.correlations])
 
   // Get consolidated AI insights
-  const getConsolidatedInsights = () => {
+  const getConsolidatedInsights = useMemo(() => {
     const insights = analyticsData?.insights || []
     if (insights.length === 0) return null
 
@@ -248,10 +317,10 @@ export function EnhancedDashboard({
       achievements: insightData.achievements || [],
       generatedAt: latestInsight.generated_at
     }
-  }
+  }, [analyticsData?.insights])
 
-  const dailyFocus = getDailyFocus()
-  const consolidatedInsights = getConsolidatedInsights()
+  const dailyFocus = useMemo(() => getDailyFocus(), [analyticsData?.insights])
+  const consolidatedInsights = getConsolidatedInsights
 
   // Helper functions for categorization
   const getCategoryIcon = (category: string) => {
@@ -303,12 +372,19 @@ export function EnhancedDashboard({
             </select>
             
             <Button
-              onClick={onRefresh}
+              onClick={async () => {
+                // First refresh the wellness score
+                await forceRefreshWellnessScore()
+                // Then refresh the overall data
+                if (onRefresh) {
+                  onRefresh()
+                }
+              }}
               disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+              Refresh All
             </Button>
           </div>
         </div>
@@ -647,9 +723,26 @@ export function EnhancedDashboard({
             <div className="space-y-6">
               {trends.length > 0 ? (
                 <>
-                  {/* Trend Chart */}
+                  {/* Trend Chart with Metric Selection */}
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Health Trends (Last 7 Days)</h3>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">Health Trends (Last 7 Days)</h3>
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-gray-500" />
+                        <select
+                          value={selectedTrendMetric}
+                          onChange={(e) => setSelectedTrendMetric(e.target.value)}
+                          className="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Metrics (Top 3)</option>
+                          {trends.map((trend) => (
+                            <option key={trend.metric_name} value={trend.metric_name}>
+                              {trend.metric_name.charAt(0).toUpperCase() + trend.metric_name.slice(1).replace(/_/g, ' ')}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={trendData}>
@@ -659,7 +752,7 @@ export function EnhancedDashboard({
                           <Tooltip 
                             formatter={(value, name) => [
                               typeof value === 'number' ? value.toFixed(1) : value,
-                              name.charAt(0).toUpperCase() + name.slice(1)
+                              name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ')
                             ]}
                           />
                           <Legend />
@@ -672,14 +765,15 @@ export function EnhancedDashboard({
                               medication: 'Medication',
                               symptoms: 'Symptoms',
                               mood: 'Mood',
-                              sleep: 'Sleep'
+                              sleep: 'Sleep',
+                              'blood-pressure-monitor': 'Blood Pressure'
                             }
                             return (
                               <Line 
                                 key={key}
                                 type="monotone" 
                                 dataKey={key} 
-                                name={metricNames[key] || key}
+                                name={metricNames[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}
                                 stroke={colors[index % colors.length]}
                                 strokeWidth={3}
                                 dot={{ r: 5, fill: colors[index % colors.length] }}
@@ -766,7 +860,7 @@ export function EnhancedDashboard({
           {/* Correlations Content */}
           {activeTab === 'correlations' && (
             <div className="space-y-6">
-              {analyticsData?.correlations && analyticsData.correlations.length > 0 ? (
+              {significantCorrelations && significantCorrelations.length > 0 ? (
             <div className="space-y-4">
                   <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800 mb-6">
                     <div className="flex items-start gap-4">
@@ -779,13 +873,18 @@ export function EnhancedDashboard({
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">
                           Discover relationships between your health metrics and identify patterns that can help optimize your wellness routine.
+                          {significantCorrelations.length < (analyticsData?.correlations?.length || 0) && (
+                            <span className="block text-sm mt-2 text-blue-600 dark:text-blue-400">
+                              Showing {significantCorrelations.length} significant correlations out of {analyticsData?.correlations?.length || 0} total.
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
             </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {analyticsData.correlations.map((correlation, index) => {
+                    {significantCorrelations.map((correlation, index) => {
                       const strength = Math.abs(correlation.correlation)
                       const isPositive = correlation.correlation > 0
                       const strengthLabel = strength > 0.7 ? 'Strong' : strength > 0.4 ? 'Moderate' : 'Weak'

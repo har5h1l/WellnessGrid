@@ -350,26 +350,45 @@ private static async getLastInsight(userId: string): Promise<HealthInsight | nul
       this.getPreviousInsights(userId, insightType)
     ])
 
+    console.log(`📊 Data availability check:`)
+    console.log(`  - User profile: ${userProfile ? '✅' : '❌'}`)
+    console.log(`  - Health conditions: ${userConditions ? userConditions.length : 0}`)
+    console.log(`  - Tracking data: ${trackingData.length} entries`)
+    console.log(`  - Previous insights: ${previousInsights.length}`)
+
+    // More intelligent data threshold checking
+    const hasMinimumData = trackingData.length >= 3 // At least 3 tracking entries
+    const hasRecentData = trackingData.some(entry => {
+      const entryDate = new Date(entry.timestamp)
+      const daysSinceEntry = (Date.now() - entryDate.getTime()) / (1000 * 60 * 60 * 24)
+      return daysSinceEntry <= 3 // At least one entry in last 3 days
+    })
+
+    console.log(`📊 Data quality check:`)
+    console.log(`  - Minimum data (≥3 entries): ${hasMinimumData ? '✅' : '❌'}`)
+    console.log(`  - Recent data (≤3 days): ${hasRecentData ? '✅' : '❌'}`)
+
+    // If we have sufficient tracking data, generate insights even without complete profile
+    if (!hasMinimumData || !hasRecentData) {
+      console.log('⚠️ Insufficient or outdated tracking data for meaningful insights')
+      return this.createDataInsufficientInsight(userId, insightType, trackingData.length, userProfile)
+    }
+
+    // If no user profile but we have good tracking data, create insights from data only
     if (!userProfile) {
-      console.log('⚠️ User profile not found, creating basic insights without profile data')
-      // Create basic insights without profile data - user might not have completed setup
-      if (trackingData.length === 0) {
-        console.log('⚠️ No tracking data found either, creating basic empty insight')
-        return this.createEmptyInsight(userId, insightType)
-      }
-      // Generate basic insights from tracking data only
+      console.log('⚠️ User profile not found, but have sufficient tracking data - generating basic insights')
       return this.createBasicInsightFromData(userId, insightType, trackingData)
     }
 
-    if (trackingData.length === 0) {
-      console.log('⚠️ No tracking data found for insights generation')
-      return this.createEmptyInsight(userId, insightType)
-    }
-
     // Structure data for LLM analysis
-    const structuredData = this.structureDataForAnalysis(trackingData, userConditions, userProfile)
+    const structuredData = this.structureDataForAnalysis(trackingData, userConditions, userProfile, userId)
     
-    // Generate insights using LLM
+    // Enhanced logging for debugging
+    console.log(`📊 Structured data for LLM:`, JSON.stringify(structuredData, null, 2))
+    console.log(`👤 User conditions count: ${userConditions?.length || 0}`)
+    console.log(`🏥 User profile available: ${!!userProfile}`)
+    
+    // Generate insights using LLM with enhanced error handling
     const insightsResponse = await this.generateInsightsWithLLM(structuredData, userConditions, previousInsights)
     
     // Parse and validate LLM response
@@ -995,12 +1014,14 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
   private static structureDataForAnalysis(
     trackingData: TrackingEntry[], 
     userConditions: any[], 
-    userProfile: any
+    userProfile: any,
+    userId: string
   ): any {
     const summary = this.createDataSummary(trackingData)
     const metrics = this.extractDetailedMetrics(trackingData)
     
     return {
+      userId,
       period: this.calculateDataPeriod(trackingData),
       totalEntries: trackingData.length,
       summary,
@@ -1205,7 +1226,157 @@ ANALYZE THE DATA AND PROVIDE INSIGHTS AS VALID JSON:
         data_points_analyzed: 0,
         confidence_score: 0.1
       },
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      id: `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }
+  }
+
+  /**
+   * Create more specific insight when data is insufficient but explain what's missing
+   */
+  private static createDataInsufficientInsight(
+    userId: string, 
+    insightType: string, 
+    dataPointsCount: number, 
+    userProfile: any
+  ): HealthInsight {
+    const missingElements = []
+    
+    if (!userProfile) {
+      missingElements.push('complete profile setup')
+    }
+    
+    if (dataPointsCount === 0) {
+      missingElements.push('health tracking data')
+    } else if (dataPointsCount < 3) {
+      missingElements.push('sufficient tracking data (need at least 3 entries)')
+    }
+    
+    const suggestions = []
+    if (!userProfile) {
+      suggestions.push('Complete your profile setup in Settings')
+    }
+    if (dataPointsCount < 3) {
+      suggestions.push('Track your health metrics for at least 3 days')
+      suggestions.push('Use the recommended tracking tools on your dashboard')
+    }
+    
+    const insights = {
+      summary: `Need more data for personalized insights. Currently missing: ${missingElements.join(', ')}.`,
+      trends: [],
+      concerns: [],
+      recommendations: suggestions.length > 0 ? suggestions : [
+        'Continue consistent health tracking to gather more data for analysis',
+        'Complete your profile setup for more personalized insights',
+        'Add health conditions to your profile for targeted recommendations'
+      ],
+      priority_actions: [
+        {
+          title: 'Start tracking consistently',
+          description: 'Track your health metrics daily to build a comprehensive health picture',
+          category: 'tracking'
+        }
+      ],
+      achievements: [],
+      correlations: []
+    }
+
+    return {
+      user_id: userId,
+      insight_type: insightType,
+      insights,
+      alerts: [],
+      metadata: {
+        processing_time_ms: 0,
+        data_points_analyzed: dataPointsCount,
+        confidence_score: 0.2,
+        missing_elements: missingElements
+      },
+      generated_at: new Date().toISOString(),
+      id: `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }
+  }
+
+  /**
+   * Create insights from tracking data without full profile
+   */
+  private static createBasicInsightFromData(
+    userId: string, 
+    insightType: string, 
+    trackingData: TrackingEntry[]
+  ): HealthInsight {
+    const toolGroups = this.groupByTool(trackingData)
+    const insights = {
+      summary: `Based on your ${trackingData.length} tracking entries across ${Object.keys(toolGroups).length} health metrics.`,
+      trends: [],
+      concerns: [],
+      recommendations: [],
+      achievements: [],
+      correlations: []
+    }
+
+    // Analyze each tool's data
+    Object.entries(toolGroups).forEach(([toolId, entries]) => {
+      const toolName = toolId.replace('-tracker', '').replace('_', ' ')
+      
+      if (toolId.includes('mood')) {
+        const moodScores = entries.map(e => e.data?.mood || e.data?.mood_rating || 5)
+        const avgMood = moodScores.reduce((sum, score) => sum + score, 0) / moodScores.length
+        
+        if (avgMood >= 7) {
+          insights.achievements.push(`Maintaining good mood levels (average: ${avgMood.toFixed(1)}/10)`)
+        } else if (avgMood < 5) {
+          insights.concerns.push(`Mood levels below average (${avgMood.toFixed(1)}/10) - consider support resources`)
+          insights.recommendations.push('Consider talking to someone about your mood patterns')
+        }
+        
+        insights.trends.push({
+          metric: 'mood',
+          direction: moodScores[0] > moodScores[moodScores.length - 1] ? 'improving' : 'stable',
+          description: `Mood tracking shows ${entries.length} entries with average score ${avgMood.toFixed(1)}`
+        })
+      }
+      
+      if (toolId.includes('glucose')) {
+        const glucoseValues = entries.map(e => e.data?.glucose_level || e.data?.glucose || 120)
+        const avgGlucose = glucoseValues.reduce((sum, val) => sum + val, 0) / glucoseValues.length
+        
+        if (avgGlucose > 140) {
+          insights.concerns.push(`Glucose levels elevated (average: ${avgGlucose.toFixed(0)} mg/dL)`)
+          insights.recommendations.push('Monitor glucose levels more frequently and consult healthcare provider')
+        } else if (avgGlucose < 70) {
+          insights.concerns.push(`Glucose levels low (average: ${avgGlucose.toFixed(0)} mg/dL)`)
+          insights.recommendations.push('Be aware of hypoglycemia symptoms')
+        } else {
+          insights.achievements.push(`Glucose levels well controlled (average: ${avgGlucose.toFixed(0)} mg/dL)`)
+        }
+      }
+      
+      // Add general recommendation based on tracking consistency
+      if (entries.length >= 5) {
+        insights.achievements.push(`Consistent tracking of ${toolName} (${entries.length} entries)`)
+      }
+    })
+
+    // Add general recommendations
+    if (insights.recommendations.length === 0) {
+      insights.recommendations.push('Continue tracking to identify health patterns')
+      insights.recommendations.push('Add more health metrics for comprehensive insights')
+    }
+
+    return {
+      user_id: userId,
+      insight_type: insightType,
+      insights,
+      alerts: [],
+      metadata: {
+        processing_time_ms: 50,
+        data_points_analyzed: trackingData.length,
+        confidence_score: 0.6,
+        analysis_type: 'basic_data_only'
+      },
+      generated_at: new Date().toISOString(),
+      id: `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     }
   }
 

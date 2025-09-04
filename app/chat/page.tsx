@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useApp, useUser, useConditions } from "@/lib/store/enhanced-context"
+import { useApp, useUser, useConditions } from "@/lib/store/safe-context"
 import { AppLogo } from "@/components/app-logo"
 import { ArrowLeft, Send } from "lucide-react"
 import Link from "next/link"

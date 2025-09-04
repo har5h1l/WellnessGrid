@@ -4,7 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { EnhancedMobileNav } from "@/components/navigation/enhanced-mobile-nav"
-import { AppProvider } from "@/lib/store/enhanced-context"
+import { SafeAppProvider } from "@/lib/store/safe-context"
 import { Toaster } from "sonner"
 
 const inter = Inter({ 
@@ -107,15 +107,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
-          <AppProvider>
+          <SafeAppProvider>
             <div className="min-h-screen bg-background">
               {children}
               <EnhancedMobileNav />
             </div>
             <Toaster position="top-center" richColors />
-          </AppProvider>
+          </SafeAppProvider>
         </ThemeProvider>
       </body>
     </html>

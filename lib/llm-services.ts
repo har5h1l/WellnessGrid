@@ -22,6 +22,10 @@ try {
     openrouterClient = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
       apiKey: OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001",
+        "X-Title": "WellnessGrid Health Insights"
+      }
     });
   }
 } catch (error) {
@@ -269,12 +273,12 @@ export class LLMService {
     }
 
     try {
-      // Use free models on OpenRouter - try multiple free models in case one is unavailable
+      // Use current free models on OpenRouter (updated Aug 2025)
       const freeModels = [
-        "mistralai/mistral-7b-instruct:free",
-        "nousresearch/nous-capybara-7b:free",
-        "gryphe/mythomist-7b:free",
-        "huggingfaceh4/zephyr-7b-beta:free"
+        "deepseek/deepseek-chat-v3.1:free",
+        "openai/gpt-oss-120b:free",
+        "openai/gpt-oss-20b:free",
+        "z-ai/glm-4.5-air:free"
       ];
       
       let lastError = null;
@@ -338,12 +342,12 @@ export class LLMService {
         content: msg.content
       }));
 
-      // Use free models on OpenRouter - try multiple free models in case one is unavailable
+      // Use current free models on OpenRouter (updated Aug 2025)
       const freeModels = [
-        "mistralai/mistral-7b-instruct:free",
-        "nousresearch/nous-capybara-7b:free",
-        "gryphe/mythomist-7b:free",
-        "huggingfaceh4/zephyr-7b-beta:free"
+        "deepseek/deepseek-chat-v3.1:free",
+        "openai/gpt-oss-120b:free",
+        "openai/gpt-oss-20b:free",
+        "z-ai/glm-4.5-air:free"
       ];
       
       let lastError = null;
