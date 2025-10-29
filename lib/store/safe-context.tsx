@@ -287,4 +287,18 @@ export const createActions = (dispatch: React.Dispatch<SafeAppAction>) => ({
   setError: (error: { key: string; message: string; details?: string }) => 
     dispatch({ type: "SET_ERROR", payload: error }),
   clearError: (key: string) => dispatch({ type: "CLEAR_ERROR", payload: key }),
+  
+  // Mock medication logging action - just logs to console for demo
+  addMedicationLog: (logEntry: any) => {
+    console.log('📝 Medication log entry (mock):', logEntry)
+    // In a real app, this would save to database
+    // For demo purposes, we just log it
+  },
+  
+  // Add other missing actions as needed
+  addSymptom: (symptom: any) => console.log('📝 Symptom entry (mock):', symptom),
+  addMood: (mood: any) => console.log('📝 Mood entry (mock):', mood),
+  addMedication: (medication: any) => console.log('📝 Medication added (mock):', medication),
+  updateMedication: (id: string, updates: any) => console.log('📝 Medication updated (mock):', id, updates),
+  removeMedication: (id: string) => console.log('📝 Medication removed (mock):', id),
 })

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { DatabaseService, authHelpers } from "@/lib/database"
+import { useAnalyticsRefresh } from "@/hooks/use-analytics-refresh"
 import { Activity, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
 
@@ -19,6 +20,7 @@ interface GlucoseTrackerProps {
 }
 
 export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProps) {
+  const { refreshAll } = useAnalyticsRefresh()
   const [glucoseLevel, setGlucoseLevel] = useState("")
   const [timing, setTiming] = useState("")
   const [carbsConsumed, setCarbsConsumed] = useState("")
@@ -139,6 +141,10 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
       const status = getGlucoseStatus(level, timing)
       toast.success(`Glucose logged: ${level} mg/dL (${status.status})`)
       
+      // Trigger real-time analytics refresh
+      console.log('🔄 Triggering analytics refresh after glucose log...')
+      await refreshAll()
+      
       if (onEntry) {
         onEntry(entry)
       }
@@ -160,7 +166,7 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
     
     if (filteredEntries.length === 0) return 0
     
-    const total = filteredEntries.reduce((sum, entry) => sum + entry.data.glucose_level, 0)
+    const total = filteredEntries.reduce((sum, entry) => sum + (entry.data?.glucose_level || 0), 0)
     return Math.round(total / filteredEntries.length)
   }
 
@@ -175,7 +181,7 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
     if (filteredEntries.length === 0) return 0
     
     const inRange = filteredEntries.filter(entry => {
-      const status = getGlucoseStatus(entry.data.glucose_level, entry.data.timing)
+      const status = getGlucoseStatus(entry.data?.glucose_level || 0, entry.data?.timing || 'unknown')
       return status.status === 'normal'
     }).length
     
@@ -372,7 +378,7 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
           <CardContent>
             <div className="space-y-3">
               {recentEntries.slice(0, 10).map((entry, index) => {
-                const status = getGlucoseStatus(entry.data.glucose_level, entry.data.timing)
+                const status = getGlucoseStatus(entry.data?.glucose_level || 0, entry.data?.timing || 'unknown')
                 const date = new Date(entry.timestamp)
                 
                 return (
@@ -380,17 +386,17 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
                     <div className="flex justify-between items-start">
                       <div>
                         <div className={`text-lg font-semibold ${status.color}`}>
-                          {entry.data.glucose_level} mg/dL
+                          {entry.data?.glucose_level || 0} mg/dL
                         </div>
                         <div className="text-sm text-gray-600">
-                          {entry.data.timing.replace(/_/g, ' ')} • {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {entry.data?.timing ? entry.data.timing.replace(/_/g, ' ') : 'Unknown timing'} • {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        {entry.data.carbs_consumed && (
+                        {entry.data?.carbs_consumed && (
                           <div className="text-xs text-gray-500">
                             Carbs: {entry.data.carbs_consumed}g
                           </div>
                         )}
-                        {entry.data.insulin_taken && (
+                        {entry.data?.insulin_taken && (
                           <div className="text-xs text-gray-500">
                             Insulin: {entry.data.insulin_taken} units
                           </div>
@@ -404,12 +410,12 @@ export function GlucoseTracker({ toolId, userTool, onEntry }: GlucoseTrackerProp
                         )}
                       </div>
                     </div>
-                    {entry.data.symptoms && entry.data.symptoms.length > 0 && (
+                    {entry.data?.symptoms && entry.data.symptoms.length > 0 && (
                       <div className="mt-2 text-xs text-gray-600">
                         Symptoms: {entry.data.symptoms.join(', ').replace(/_/g, ' ')}
                       </div>
                     )}
-                    {entry.data.notes && (
+                    {entry.data?.notes && (
                       <div className="mt-2 text-xs text-gray-600">
                         {entry.data.notes}
                       </div>

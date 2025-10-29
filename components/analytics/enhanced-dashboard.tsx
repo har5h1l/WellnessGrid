@@ -14,7 +14,7 @@ import {
   Plus, Sparkles, Trophy, Flame, Star, Award, Zap, Bell, Eye, ChevronUp,
   AlertCircle, CheckCircle2, XCircle, Timer, CalendarDays, Users,
   BookOpen, HelpCircle, Settings, Download, Share2, Filter, Search, Network,
-  ChevronDown, BarChart3, LineChart, PieChart, Lightbulb
+  ChevronDown, BarChart3, LineChart, PieChart, Lightbulb, ArrowLeft
 } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
@@ -351,6 +351,17 @@ export function EnhancedDashboard({
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="p-6 md:p-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onNavigate?.('/dashboard')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+            </div>
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                 Your Health Dashboard
@@ -781,9 +792,68 @@ export function EnhancedDashboard({
                               />
                             )
                           })}
+                          
+                          {/* Ideal Range Lines */}
+                          {selectedTrendMetric === 'all' && (
+                            <>
+                              {/* Glucose ideal range (70-140 mg/dL) */}
+                              <ReferenceLine y={70} stroke="#10b981" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Glucose Ideal Low", position: "topLeft" }} />
+                              <ReferenceLine y={140} stroke="#10b981" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Glucose Ideal High", position: "topLeft" }} />
+                              
+                              {/* Mood ideal range (7-10) */}
+                              <ReferenceLine y={7} stroke="#8b5cf6" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Mood Good", position: "topRight" }} />
+                              <ReferenceLine y={10} stroke="#8b5cf6" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Mood Excellent", position: "topRight" }} />
+                              
+                              {/* Blood Pressure ideal range (120-130 systolic) */}
+                              <ReferenceLine y={120} stroke="#f59e0b" strokeDasharray="2 2" strokeWidth={2} label={{ value: "BP Ideal Low", position: "bottomLeft" }} />
+                              <ReferenceLine y={130} stroke="#f59e0b" strokeDasharray="2 2" strokeWidth={2} label={{ value: "BP Ideal High", position: "bottomLeft" }} />
+                            </>
+                          )}
+                          
+                          {/* Specific metric ideal ranges */}
+                          {selectedTrendMetric === 'glucose' && (
+                            <>
+                              <ReferenceLine y={70} stroke="#10b981" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Ideal Low (70)", position: "topLeft" }} />
+                              <ReferenceLine y={140} stroke="#10b981" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Ideal High (140)", position: "topLeft" }} />
+                            </>
+                          )}
+                          
+                          {selectedTrendMetric === 'mood' && (
+                            <>
+                              <ReferenceLine y={7} stroke="#8b5cf6" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Good (7+)", position: "topLeft" }} />
+                              <ReferenceLine y={10} stroke="#8b5cf6" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Excellent (10)", position: "topLeft" }} />
+                            </>
+                          )}
+                          
+                          {selectedTrendMetric === 'blood-pressure-monitor' && (
+                            <>
+                              <ReferenceLine y={120} stroke="#f59e0b" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Ideal Low (120)", position: "topLeft" }} />
+                              <ReferenceLine y={130} stroke="#f59e0b" strokeDasharray="2 2" strokeWidth={2} label={{ value: "Ideal High (130)", position: "topLeft" }} />
+                            </>
+                          )}
+                          
                           <ReferenceLine y={trendData[0]?.baseline} stroke="#6b7280" strokeDasharray="5 5" />
                         </ComposedChart>
                       </ResponsiveContainer>
+                    </div>
+                    
+                    {/* Ideal Range Legend */}
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">Ideal Range Guidelines</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-blue-800 dark:text-blue-200">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-0.5 bg-green-500" style={{borderTop: '2px dashed #10b981'}}></div>
+                          <span><strong>Glucose:</strong> 70-140 mg/dL</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-0.5 bg-purple-500" style={{borderTop: '2px dashed #8b5cf6'}}></div>
+                          <span><strong>Mood:</strong> 7-10 (Good-Excellent)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-0.5 bg-amber-500" style={{borderTop: '2px dashed #f59e0b'}}></div>
+                          <span><strong>Blood Pressure:</strong> 120-130 mmHg</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

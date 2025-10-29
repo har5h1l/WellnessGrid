@@ -3,10 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 import { llmService } from '@/lib/llm-services';
 import { chatService, ChatMessage } from '@/lib/chat-service';
 import { HealthContextService } from '@/lib/services/health-context';
+import { queryContextAnalyzer } from '@/lib/query-context-analyzer';
 
 // Supabase configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Validate environment variables
+if (!supabaseUrl) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
+}
+if (!supabaseKey) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
+}
 
 // Flask backend configuration (for embeddings and text generation)
 const FLASK_API_BASE_URL = process.env.FLASK_API_URL || 'http://localhost:5001';
@@ -164,7 +175,7 @@ class EnhancedSupabaseRAGSystem {
     return this.queryWithHealthContext(question, sessionId, null);
   }
   
-  async queryWithHealthContext(question: string, sessionId: string, healthContext: string | null): Promise<RAGResponse> {
+  async queryWithHealthContext(question: string, sessionId: string, healthContext: string | null, userId?: string | null): Promise<RAGResponse> {
     const startTime = Date.now();
     const fallbacksUsed: string[] = [];
     
@@ -187,18 +198,48 @@ class EnhancedSupabaseRAGSystem {
       console.log('📚 No chat history found, starting new conversation');
     }
     
-    // Step 2: Enhance query using Gemini/OpenRouter with chat history and health context
+    // Step 1.5: **NEW** - Analyze query and fetch relevant user data
+    let enrichedContext = '';
+    console.log('🔍 [DEBUG] healthContext available:', !!healthContext);
+    console.log('🔍 [DEBUG] healthContext length:', healthContext?.length || 0);
+    console.log('🔍 [DEBUG] healthContext preview:', healthContext?.substring(0, 200));
+    console.log('🔍 [DEBUG] userId provided:', userId);
+    
+    if (userId) {
+      console.log('🔍 Analyzing query for specific user data needs...');
+      try {
+        enrichedContext = await queryContextAnalyzer.getEnrichedContext(question, userId);
+        console.log('✅ Enriched context with relevant user data');
+        console.log('🔍 [DEBUG] enrichedContext length:', enrichedContext.length);
+        console.log('\n[API] Enriched User Data Context:\n' + '-'.repeat(50));
+        console.log(enrichedContext);
+        console.log('-'.repeat(50));
+      } catch (error) {
+        console.error('⚠️ Error enriching context:', error);
+        enrichedContext = healthContext || ''; // fallback to original health context
+      }
+    } else if (healthContext) {
+      console.warn('⚠️ [DEBUG] No userId provided, using original healthContext');
+      enrichedContext = healthContext;
+    } else {
+      console.warn('⚠️ [DEBUG] No healthContext or userId provided!');
+    }
+    
+    console.log('🔍 [DEBUG] Final enrichedContext length:', enrichedContext.length);
+    console.log('🔍 [DEBUG] Final enrichedContext preview:', enrichedContext.substring(0, 200));
+    
+    // Step 2: Enhance query using Gemini/OpenRouter with chat history and enriched health context
     let finalQuery = question;
     let queryEnhanced = false;
     let queryEnhancementService: string | undefined;
     
     console.log('🧠 Enhancing query with LLM...');
     
-    // Add health context to the query enhancement if available
+    // Add enriched context to the query enhancement if available
     let enhancedPrompt = question;
-    if (healthContext) {
-      enhancedPrompt = `USER HEALTH CONTEXT:\n${healthContext}\n\nQUERY: ${question}`;
-      console.log('🏥 Added health context to query enhancement');
+    if (enrichedContext) {
+      enhancedPrompt = `USER HEALTH DATA:\n${enrichedContext}\n\nQUERY: ${question}`;
+      console.log('🏥 Added enriched user data context to query enhancement');
     }
     
     const queryEnhancement = await llmService.enhanceQuery(enhancedPrompt, chatHistory.messages);
@@ -222,7 +263,7 @@ class EnhancedSupabaseRAGSystem {
       // Fallback response when embedding fails
       fallbacksUsed.push('embedding_failed');
       
-      const fallbackResponse = await this.handleEmbeddingFailure(question, chatHistory.messages, healthContext);
+      const fallbackResponse = await this.handleEmbeddingFailure(question, chatHistory.messages, enrichedContext);
       const processingTime = Date.now() - startTime;
       
       const response = await this.saveAndReturnResponse(
@@ -253,16 +294,16 @@ class EnhancedSupabaseRAGSystem {
       fallbacksUsed.push('rag_failure_detected');
     }
     
-    // Step 6: Prepare context from retrieved documents + health context
+    // Step 6: Prepare context from retrieved documents + enriched health context
     const contextParts: string[] = [];
     let totalChars = 0;
-    const maxContextLength = healthContext ? 1500 : 2000; // Reduce space for documents if we have health context
+    const maxContextLength = enrichedContext ? 1500 : 2000; // Reduce space for documents if we have enriched context
     
-    // Add health context first if available
-    if (healthContext) {
-      contextParts.push(`PATIENT CONTEXT:\n${healthContext}`);
-      totalChars += healthContext.length + 20; // Account for header
-      console.log('🏥 Added health context to medical generation context');
+    // Add enriched health context first if available
+    if (enrichedContext) {
+      contextParts.push(`PATIENT HEALTH DATA:\n${enrichedContext}`);
+      totalChars += enrichedContext.length + 25; // Account for header
+      console.log('🏥 Added enriched health data to medical generation context');
     }
     
     for (const doc of similarDocs) {
@@ -286,9 +327,9 @@ class EnhancedSupabaseRAGSystem {
       console.log('🔬 Generating response with BioMistral/BioGPT using retrieved context and health data...');
       generatedAnswer = await this.generateResponse(finalQuery, context, chatHistory.messages);
     } else if (ragFailureDetected) {
-      console.log('🔬 No quality documents found, but attempting BioMistral generation with health context...');
-      // Provide health context or minimal context for medical model when no documents found
-      const fallbackContext = healthContext || "General medical knowledge and clinical reasoning.";
+      console.log('🔬 No quality documents found, but attempting BioMistral generation with enriched user data...');
+      // Provide enriched context or minimal context for medical model when no documents found
+      const fallbackContext = enrichedContext || "General medical knowledge and clinical reasoning.";
       generatedAnswer = await this.generateResponse(finalQuery, fallbackContext, chatHistory.messages);
     }
     
@@ -307,8 +348,14 @@ class EnhancedSupabaseRAGSystem {
       console.log('🚨 Medical model failed to generate response, using LLM diagnostic fallback...');
       fallbacksUsed.push('llm_fallback_used');
       
-      // Use LLM diagnostic fallback when medical model fails, include health context
-      const fallbackResponse = await llmService.handleMedicalModelFailure(question, chatHistory.messages, healthContext);
+      // Use LLM diagnostic fallback when medical model fails, include enriched context
+      console.log('🔍 [DEBUG] Calling handleMedicalModelFailure with:');
+      console.log('🔍 [DEBUG] - question:', question);
+      console.log('🔍 [DEBUG] - chatHistory.messages.length:', chatHistory.messages.length);
+      console.log('🔍 [DEBUG] - enrichedContext length:', enrichedContext?.length || 0);
+      console.log('🔍 [DEBUG] - enrichedContext preview:', enrichedContext?.substring(0, 200));
+      
+      const fallbackResponse = await llmService.handleMedicalModelFailure(question, chatHistory.messages, enrichedContext);
       if (fallbackResponse.success) {
         rawAnswer = fallbackResponse.content;
         console.log(`\n[API] LLM Fallback Response:\n${'-'.repeat(50)}\n${rawAnswer}\n${'-'.repeat(50)}`);
@@ -328,8 +375,8 @@ class EnhancedSupabaseRAGSystem {
     
     console.log('💬 Improving response communication with LLM...');
     
-    // Include health context in response improvement for personalization
-    const responseImprovement = await llmService.improveResponse(rawAnswer, chatHistory.messages, healthContext);
+    // Include enriched context in response improvement for personalization
+    const responseImprovement = await llmService.improveResponse(rawAnswer, chatHistory.messages, enrichedContext);
     if (responseImprovement.success && responseImprovement.content !== rawAnswer) {
       finalAnswer = responseImprovement.content;
       responseImproved = true;
@@ -476,8 +523,8 @@ export async function POST(request: NextRequest) {
     // Use provided sessionId or generate new one
     const finalSessionId = sessionId || chatService.generateSessionId();
     
-    // Process the query using the enhanced RAG system with health context
-    const result = await ragSystem.queryWithHealthContext(query, finalSessionId, healthContext);
+    // Process the query using the enhanced RAG system with health context and userId
+    const result = await ragSystem.queryWithHealthContext(query, finalSessionId, healthContext, userId);
     
     console.log('📊 Enhanced RAG response summary:', {
       originalQuery: result.query,

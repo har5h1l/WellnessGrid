@@ -94,6 +94,14 @@ export const metadata: Metadata = {
     types: {
       "application/rss+xml": "/rss.xml"
     }
+  },
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-title': 'WellnessGrid',
+    'mobile-web-app-capable': 'yes',
+    'msapplication-TileColor': '#ef4444',
+    'msapplication-tap-highlight': 'no'
   }
 }
 

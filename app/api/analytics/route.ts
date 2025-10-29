@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
     const lastRequest = recentRequests.get(cacheKey)
     
     // More intelligent rate limiting:
-    // - Allow cached requests more frequently (2 seconds)
-    // - Allow fresh requests less frequently (5 seconds)
-    // - Don't rate limit if no previous request exists (initial load)
-    const rateLimitWindow = cached ? 2000 : 5000 // 2s for cached, 5s for fresh
+    // - Allow cached requests more frequently (1 second)
+    // - Allow fresh requests less frequently (3 seconds)
+    // - Skip rate limiting for force refresh requests
+    const rateLimitWindow = forceRefresh ? 0 : (cached ? 1000 : 3000) // 1s for cached, 3s for fresh, 0 for force refresh
     
-    if (lastRequest && (now - lastRequest) < rateLimitWindow) {
+    if (lastRequest && (now - lastRequest) < rateLimitWindow && !forceRefresh) {
       console.log(`🔄 Preventing duplicate ${cached ? 'cached' : 'fresh'} request within ${rateLimitWindow/1000} seconds`)
       
       // For cached requests, return a more gentle message

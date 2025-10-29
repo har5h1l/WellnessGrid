@@ -2,11 +2,21 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "main": "electron.js",
+  "homepage": "./",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-build": "ELECTRON_BUILD=true npm run build",
+    "electron-pack": "npm run electron-build && electron-builder",
+    "preelectron-pack": "npm run electron-build",
+    "dist": "npm run electron-build && electron-builder --publish=never",
+    "pwa-build": "npm run build",
+    "pwa-start": "npm run pwa-build && npm start"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -54,6 +64,7 @@
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
+    "next-pwa": "^5.6.0",
     "next-themes": "^0.4.4",
     "node-fetch": "^2.6.7",
     "openai": "^5.7.0",
@@ -61,8 +72,10 @@
     "react-day-picker": "^9.7.0",
     "react-dom": "^19",
     "react-hook-form": "^7.54.1",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -74,8 +87,34 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.wellnessgrid.app",
+    "productName": "WellnessGrid",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "electron.js",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.healthcare-fitness",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

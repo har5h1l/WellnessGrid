@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useApp } from "@/lib/store/safe-context"
 import { DatabaseService, authHelpers } from "@/lib/database"
+import { useAnalyticsRefresh } from "@/hooks/use-analytics-refresh"
 import type { User } from '@supabase/supabase-js'
 import { X, Pill, Settings } from "lucide-react"
 import Link from "next/link"
@@ -18,6 +19,7 @@ interface MedicationLoggerProps {
 
 export function MedicationLogger({ onClose }: MedicationLoggerProps) {
   const { actions } = useApp()
+  const { refreshAll } = useAnalyticsRefresh()
   const [medications, setMedications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMedications, setSelectedMedications] = useState<string[]>([])
@@ -48,6 +50,7 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
         const userData = await DatabaseService.getUserCompleteData(user.id)
         const medicationTools = userData.tools.filter(tool => 
           (tool.tool_category === 'medication_reminder' || 
+           tool.tool_category === 'medication' ||
            tool.tool_name?.toLowerCase().includes('medication') ||
            tool.tool_name?.toLowerCase().includes('medicine') ||
            tool.tool_name?.toLowerCase().includes('adherence')) &&
@@ -86,30 +89,79 @@ export function MedicationLogger({ onClose }: MedicationLoggerProps) {
 
     setIsSubmitting(true)
 
-    const now = new Date()
-    const currentDate = now.toISOString().split("T")[0]
-    const currentTime = now.toTimeString().split(" ")[0].substring(0, 5)
+    try {
+      const now = new Date()
+      const currentDate = now.toISOString().split("T")[0]
+      const currentTime = now.toTimeString().split(" ")[0].substring(0, 5)
 
-    // Log each selected medication
-    for (const medicationId of selectedMedications) {
-      const logEntry = {
-        medicationId,
-        date: currentDate,
-        scheduledTime: currentTime,
-        taken: true,
-        actualTime: currentTime,
-        notes: notes.trim() || undefined,
-        sideEffects: sideEffects.length > 0 ? sideEffects : undefined,
+      // Get current user
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        console.error('No user found')
+        return
       }
 
-      actions.addMedicationLog(logEntry)
+      // Log each selected medication to the database
+      for (const medicationId of selectedMedications) {
+        const logEntry = {
+          user_id: user.id,
+          medication_id: medicationId,
+          date: currentDate,
+          scheduled_time: currentTime,
+          taken: true,
+          actual_time: currentTime,
+          notes: notes.trim() || null,
+          side_effects: sideEffects.length > 0 ? sideEffects : null,
+          created_at: now.toISOString(),
+          updated_at: now.toISOString()
+        }
+
+        // Save to medication_logs table
+        const { error: logError } = await DatabaseService.supabase
+          .from('medication_logs')
+          .insert([logEntry])
+
+        if (logError) {
+          console.error('Error saving medication log:', logError)
+        } else {
+          console.log('✅ Medication log saved successfully:', logEntry)
+        }
+
+        // Also create a tracking entry for analytics
+        const trackingEntry = {
+          user_id: user.id,
+          tool_id: 'medication-tracker',
+          data: {
+            medication_id: medicationId,
+            taken: true,
+            time_taken: currentTime,
+            notes: notes.trim() || null,
+            side_effects: sideEffects.length > 0 ? sideEffects : null
+          },
+          timestamp: now.toISOString()
+        }
+
+        const { error: trackingError } = await DatabaseService.supabase
+          .from('tracking_entries')
+          .insert([trackingEntry])
+
+        if (trackingError) {
+          console.error('Error saving tracking entry:', trackingError)
+        } else {
+          console.log('✅ Tracking entry saved successfully:', trackingEntry)
+        }
+      }
+
+      // Trigger real-time analytics refresh
+      console.log('🔄 Triggering analytics refresh after medication log...')
+      await refreshAll()
+
+    } catch (error) {
+      console.error('Error logging medication:', error)
+    } finally {
+      setIsSubmitting(false)
+      onClose()
     }
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    setIsSubmitting(false)
-    onClose()
   }
 
   if (loading) {

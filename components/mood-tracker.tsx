@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useApp } from "@/lib/store/safe-context"
 import { DatabaseService, authHelpers } from "@/lib/database"
+import { useAnalyticsRefresh } from "@/hooks/use-analytics-refresh"
 import { toast } from "sonner"
 import { X, Heart, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react"
 
@@ -21,6 +22,7 @@ interface MoodTrackerProps {
 
 export function MoodTracker({ onClose, toolId, userTool, onEntry }: MoodTrackerProps) {
   const { actions } = useApp()
+  const { refreshAll } = useAnalyticsRefresh()
   const [mood, setMood] = useState<"very-sad" | "sad" | "neutral" | "happy" | "very-happy">("neutral")
   const [energy, setEnergy] = useState([5])
   const [stress, setStress] = useState([5])
@@ -131,6 +133,10 @@ export function MoodTracker({ onClose, toolId, userTool, onEntry }: MoodTrackerP
         // Reload recent entries
         loadRecentEntries()
         
+        // Trigger real-time analytics refresh
+        console.log('🔄 Triggering analytics refresh after mood log...')
+        await refreshAll()
+        
         toast.success("Mood logged successfully!")
       } else {
         // Legacy system
@@ -138,6 +144,10 @@ export function MoodTracker({ onClose, toolId, userTool, onEntry }: MoodTrackerP
         
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 500))
+        
+        // Trigger real-time analytics refresh
+        console.log('🔄 Triggering analytics refresh after mood log...')
+        await refreshAll()
         
         if (onClose) {
           onClose()

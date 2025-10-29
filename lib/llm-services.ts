@@ -568,6 +568,11 @@ export class LLMService {
    */
   async handleMedicalModelFailure(originalUserQuery: string, chatHistory: ChatMessage[] = [], healthContext?: string): Promise<LLMResponse> {
     console.log('🚨 Medical model failure detected, using general medical knowledge fallback...');
+    console.log('🔍 [DEBUG handleMedicalModelFailure] originalUserQuery:', originalUserQuery);
+    console.log('🔍 [DEBUG handleMedicalModelFailure] chatHistory.length:', chatHistory.length);
+    console.log('🔍 [DEBUG handleMedicalModelFailure] healthContext provided:', !!healthContext);
+    console.log('🔍 [DEBUG handleMedicalModelFailure] healthContext length:', healthContext?.length || 0);
+    console.log('🔍 [DEBUG handleMedicalModelFailure] healthContext content:', healthContext?.substring(0, 300));
     
     // Choose method based on whether we have chat history
     if (chatHistory.length > 0) {
@@ -639,8 +644,15 @@ Helpful response:`;
         return openRouterResult;
       }
     } else {
-      // No history - use simple prompt
-      const fallbackPrompt = MEDICAL_MODEL_FALLBACK_TEMPLATE.replace('{originalUserQuery}', originalUserQuery);
+      // No history - use simple prompt with health context if available
+      let fallbackPrompt = MEDICAL_MODEL_FALLBACK_TEMPLATE.replace('{originalUserQuery}', originalUserQuery);
+      
+      // Add health context if available
+      if (healthContext) {
+        fallbackPrompt = `PATIENT HEALTH DATA:\n${healthContext}\n\n${fallbackPrompt}`;
+        console.log('🏥 Added enriched health data to medical model fallback (no history)');
+      }
+      
       console.log(`\n[LLM Service] Medical Model Fallback Prompt:\n${'-'.repeat(50)}\n${fallbackPrompt}\n${'-'.repeat(50)}`);
       
       // Try Gemini first
