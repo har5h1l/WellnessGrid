@@ -1,83 +1,18 @@
-# WellnessGrid
+# WellnessGrid Demo 🎯
 
-**Your Personal AI Health Coach — Designed for Teens**
+> **Standalone demo version for easy evaluation and testing**
 
-WellnessGrid is a comprehensive health management platform that empowers teenagers with chronic conditions to take control of their health journey. Through AI-powered guidance, intuitive tracking tools, and smart analytics, teens can better understand and manage their health with confidence.
+This directory contains a simplified demo version of WellnessGrid that showcases all core features without requiring any backend setup, API keys, or database configuration.
 
-## 🏥 How WellnessGrid Works
+---
 
-### Core Features
+## 🚀 Quick Start
 
-**1. AI Health Coach**
-- Chat 24/7 with an AI trained on medical knowledge
-- Get personalized insights about your symptoms and patterns
-- Ask questions about your condition in plain language
-- Powered by BioMistral medical AI with RAG (Retrieval-Augmented Generation)
+### Try Online
 
-**2. Health Tracking**
-- Track glucose levels, sleep, mood, medications, and more
-- Simple, teen-friendly interface designed for daily use
-- Automatic pattern detection and anomaly alerts
-- Visual dashboards showing your wellness score and trends
+Visit the **[live demo](https://wellnessgrid.vercel.app)** (no signup required)
 
-**3. Smart Analytics**
-- AI-generated insights from your health data
-- Weekly trend visualizations and progress reports
-- Identify correlations between symptoms, sleep, and activities
-- Share reports with parents and doctors
-
-**4. Health Records Management**
-- Store lab results, prescriptions, and appointment notes
-- Timeline view of your medical history
-- Secure, HIPAA-compliant storage
-- Easy sharing with healthcare providers
-
-### Technology Stack
-
-**The actual WellnessGrid app includes:**
-- Supabase database for secure data storage
-- BioMistral AI with medical knowledge base
-- RAG system for context-aware responses
-- Real-time health monitoring
-- Supabase authentication
-- PWA support — works as an app on iPhone and Android
-
-## 📱 Demo Version
-
-This directory contains a simplified demo version for easy evaluation and testing.
-
-### What's Different in the Demo
-
-The demo is a **standalone, simplified version** designed to showcase WellnessGrid's features without requiring complex setup:
-
-- ✅ Uses mock data (no database needed)
-- ✅ Keyword-based chat responses (no AI API calls)
-- ✅ Self-contained Next.js app with built-in API routes
-- ✅ Deploys anywhere in minutes
-- ✅ No environment variables or API keys required
-
-## 📁 Demo Structure
-
-```
-demo/frontend/
-├── app/              # Next.js pages and API routes
-│   ├── api/         # Built-in mock API endpoints
-│   ├── dashboard/   # Health dashboard
-│   ├── chat/        # AI chat interface
-│   ├── analytics/   # Health insights
-│   └── records/     # Medical records
-├── lib/             # Mock data and utilities
-├── components/      # Reusable UI components
-└── package.json
-```
-
-## 🚀 Running the Demo
-
-### Prerequisites
-- Node.js 18 or higher
-- npm or yarn
-
-### Local Setup
+### Run Locally
 
 ```bash
 cd demo/frontend
@@ -89,65 +24,39 @@ Visit `http://localhost:3002` in your browser.
 
 **That's it!** No database, no API keys, no complex configuration needed.
 
-## 🌐 Deploying the Demo
+---
 
-### Vercel (Recommended)
+## 📱 What's in the Demo
 
-The demo deploys in minutes on Vercel's free tier:
+The demo showcases all core WellnessGrid features with mock data:
 
-```bash
-cd demo/frontend
-npm i -g vercel
-vercel login
-vercel --prod
-```
-
-Or use Vercel's dashboard:
-1. Go to vercel.com/new
-2. Import your repository
-3. Set **Root Directory** to `demo/frontend`
-4. Deploy
-
-**No environment variables needed** — the demo is completely self-contained.
-
-## 🎨 Demo Features
-
-The demo showcases all core WellnessGrid features:
-
-**Dashboard** — View wellness score, recent health metrics, and activity timeline
-
-**AI Chat** — Ask health questions and get intelligent responses (keyword-based in demo)
-
-**Analytics** — Explore health insights, trends, and pattern detection
-
-**Health Records** — Browse sample medical records, lab results, and prescriptions
+- **Interactive Dashboard** — View wellness score, recent health metrics, and activity timeline
+- **AI Chat Assistant** — Ask health questions and get intelligent responses (keyword-based in demo)
+- **Health Analytics** — Explore insights, trends, and pattern detection
+- **Health Records** — Browse sample medical records, lab results, and prescriptions
+- **Mobile-Responsive Design** — Works beautifully on desktop and mobile devices
 
 ### Demo User: Sarah Chen
+
 - 16 years old, managing Type 1 Diabetes
 - Wellness Score: 78/100
 - Sample data includes glucose tracking, sleep patterns, mood logs, and medications
 
-All data is hardcoded in `lib/mock-data.json` and can be customized.
+All data is hardcoded in `frontend/lib/mock-data.json` and can be customized.
 
-## 🔧 Customizing the Demo
+---
 
-**Mock Data:** Edit `lib/mock-data.json` to change user profile, health metrics, or chat responses
+## 🎨 Demo vs Production
 
-**Styling:** Uses Tailwind CSS — modify `app/globals.css` or component files
-
-**API Routes:** Add new endpoints in `app/api/` directory
-
-**Pages:** Create new pages in `app/` directory
-
-## 📋 Demo vs Production
-
-| Feature | Demo | Actual App |
-|---------|------|------------|
+| Feature | Demo Version | Production Version |
+|---------|-------------|-------------------|
 | **Data Storage** | Hardcoded JSON | Supabase PostgreSQL |
-| **AI Chat** | Keyword matching | BioMistral + RAG |
-| **Authentication** | None | Supabase Auth |
-| **Health Records** | Sample data | Real document storage |
-| **Analytics** | Pre-computed | Real-time pattern detection |
+| **AI Chat** | Keyword matching | BioMistral + RAG system |
+| **Authentication** | None (demo user) | Supabase Auth |
+| **Real-time Sync** | No | Yes |
+| **Data Persistence** | No | Yes |
+| **Medical Knowledge** | Pre-written responses | 1000+ medical documents via RAG |
+| **External APIs** | None | Multiple LLM services |
 | **Setup Time** | 2 minutes | 30+ minutes |
 | **Mobile App** | Web only | PWA on iPhone & Android |
 | **Cost** | Free | Requires API keys |
@@ -163,6 +72,62 @@ All data is hardcoded in `lib/mock-data.json` and can be customized.
 - ❌ No authentication
 
 **Never use the demo with real user data.**
+
+---
+
+## 🌐 Deploying the Demo
+
+### Vercel (Recommended)
+
+The demo deploys in minutes on Vercel's free tier:
+
+```bash
+cd demo/frontend
+npm i -g vercel
+vercel login
+vercel --prod
+```
+
+Or use Vercel's dashboard:
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your repository
+3. Set **Root Directory** to `demo/frontend`
+4. Deploy
+
+**No environment variables needed** — the demo is completely self-contained.
+
+---
+
+## 📁 Demo Structure
+
+```
+demo/
+├── frontend/
+│   ├── app/              # Next.js pages and API routes
+│   │   ├── api/         # Built-in mock API endpoints
+│   │   ├── dashboard/   # Health dashboard
+│   │   ├── chat/        # AI chat interface
+│   │   ├── analytics/   # Health insights
+│   │   └── records/     # Medical records
+│   ├── lib/             # Mock data and utilities
+│   ├── components/      # Reusable UI components
+│   └── package.json
+└── LICENSE              # MIT License
+```
+
+---
+
+## 🔧 Customizing the Demo
+
+**Mock Data:** Edit `frontend/lib/mock-data.json` to change user profile, health metrics, or chat responses
+
+**Styling:** Uses Tailwind CSS — modify `frontend/app/globals.css` or component files
+
+**API Routes:** Add new endpoints in `frontend/app/api/` directory
+
+**Pages:** Create new pages in `frontend/app/` directory
+
+---
 
 ## 🐛 Troubleshooting
 
@@ -183,6 +148,8 @@ All data is hardcoded in `lib/mock-data.json` and can be customized.
 - Verify the file structure in `app/api/`
 - Redeploy with a clean build
 
+---
+
 ## 📚 Learn More
 
 **About WellnessGrid:**
@@ -197,7 +164,12 @@ All data is hardcoded in `lib/mock-data.json` and can be customized.
 
 ---
 
-**Questions?** Check out the documentation or explore the code!
+## 📄 License
+
+This demo is licensed under the MIT License - see [LICENSE](./LICENSE) for details.
+
+---
+
+**Questions?** Check out the [main documentation](../README.md) or explore the code!
 
 **Ready to deploy?** Follow the deployment instructions above.
-
