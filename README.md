@@ -2,7 +2,7 @@
 
 > **Empowering teens to take control of their health journey**
 
-A comprehensive health tracking and AI wellness platform designed specifically for teenagers managing chronic conditions like Type 1 Diabetes. WellnessGrid combines intuitive health tracking tools with AI-powered insights to help teens stay on top of their wellness.
+A comprehensive health tracking and AI wellness platform designed specifically for teenagers managing chronic conditions like Type 1 Diabetes. WellnessGrid combines intuitive health tracking tools with AI-powered insights to help teens stay on top of their wellness. This app was a submission for the Congressional App Challenge.
 
 ---
 
@@ -36,23 +36,21 @@ WellnessGrid provides:
 
 ## 📺 Demo Version
 
-**For CAC/Hack Club Judges and Evaluators:**
-
 We've created a standalone demo version that showcases WellnessGrid's features without requiring any backend setup or API keys. The demo uses mock data and simulated responses.
 
 ### Try the Demo
 
-1. **Online**: Visit [your-demo-url.vercel.app](https://your-demo-url.vercel.app)
+1. **Online**: Visit [wellnessgrid.vercel.app](https://wellnessgrid.vercel.app)
 2. **Run Locally**: See [demo/README.md](./demo/README.md) for instructions
 
 ### What's in the Demo
 
-- ✅ Interactive dashboard with health metrics
-- ✅ AI chat assistant with realistic responses
-- ✅ Health analytics and trend visualization
-- ✅ Sample health records
-- ✅ Mobile-responsive design
-- ✅ No API keys or setup required
+- Interactive dashboard with health metrics
+- AI chat assistant with realistic responses
+- Health analytics and trend visualization
+- Sample health records
+- Mobile-responsive design
+- No API keys or setup required
 
 ### Demo vs Production
 
@@ -183,8 +181,6 @@ cd api-servers
 python enhanced_flask_server.py
 ```
 
-Access the app at `http://localhost:3001`
-
 ---
 
 ## 📚 Documentation
@@ -195,61 +191,6 @@ Detailed guides are available in the `/docs` directory:
 - **[LLM Integration](./docs/llm-integration-setup.md)** - AI setup guide
 - **[Tools Implementation](./docs/tools-implementation.md)** - Health tracking tools
 - **[RAG System Guide](./docs/rag-upgrade-guide.md)** - Medical knowledge base
-
----
-
-## 🚀 Deployment
-
-### Demo Version
-The demo is designed for easy deployment to platforms like Vercel or Netlify. See [demo/README.md](./demo/README.md).
-
-### Production Version
-
-**Frontend:**
-- Deploy to Vercel (recommended for Next.js)
-- Set environment variables in platform dashboard
-- Configure custom domain
-
-**Backend:**
-- Flask RAG server can run on Railway, Heroku, or any VPS
-- Requires Python 3.10+ and GPU for optimal performance
-- BioMistral model requires significant compute resources
-
-**Database:**
-- Supabase handles hosting and scaling
-- Configure Row Level Security policies
-- Set up automated backups
-
----
-
-## 🔒 Security & Privacy
-
-- All health data is encrypted at rest and in transit
-- Supabase Row Level Security enforces data access controls
-- API keys are never exposed to the client
-- No third-party tracking or analytics that compromise privacy
-- HIPAA-compliance considerations in progress
-
----
-
-## 🎓 For CAC/Hack Club Certification
-
-This project demonstrates:
-
-1. **Complex Architecture**: Full-stack app with multiple services
-2. **AI/ML Integration**: RAG system with medical AI models
-3. **Real-world Impact**: Addresses genuine need for teen health management
-4. **Production-ready Code**: TypeScript, testing, documentation
-5. **Security Best Practices**: Environment variables, authentication, encryption
-6. **Scalability**: Database design, API architecture, caching strategies
-
-### Project Highlights
-
-- **1000+ medical documents** embedded in RAG system
-- **Multiple AI models** working together
-- **Real-time insights** from health data
-- **Mobile-responsive PWA** that works offline
-- **Comprehensive documentation** for reproducibility
 
 ---
 
@@ -265,30 +206,6 @@ node tests/test-api.js
 # Test database connection
 npx ts-node tests/test-supabase.ts
 ```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! This project is designed to be a learning resource and a real tool for teens.
-
-### Areas for Contribution
-
-- Additional health tracking tools
-- UI/UX improvements
-- Expanded medical knowledge base
-- Internationalization
-- Accessibility enhancements
-- Mobile app version (React Native)
-
-### Development Guidelines
-
-1. Fork the repository
-2. Create a feature branch
-3. Write clean, documented code
-4. Follow existing code style
-5. Test your changes
-6. Submit a pull request
 
 ---
 
@@ -356,17 +273,3 @@ WellnessGrid App/
 ```
 
 ---
-
-## 💡 Quick Start Paths
-
-**For Judges/Evaluators:**
-→ Try the [demo version](./demo/README.md) (5 minutes setup)
-
-**For Developers:**
-→ Follow the [development setup](#development-setup) (30 minutes)
-
-**For Contributors:**
-→ Read [contributing guidelines](#contributing) and pick an issue
-
-**For Users:**
-→ Visit the live demo at [your-demo-url.vercel.app](https://your-demo-url.vercel.app)
