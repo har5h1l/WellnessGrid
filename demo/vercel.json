@@ -1,0 +1,28 @@
+{
+    "version": 2,
+    "name": "wellnessgrid-demo",
+    "builds": [
+        {
+            "src": "backend/server.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "frontend/package.json",
+            "use": "@vercel/next"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "backend/server.js"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "frontend/$1"
+        }
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
+}
+

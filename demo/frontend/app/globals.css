@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 0 84% 60%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 280 25% 95%;
+        --secondary-foreground: 222.2 84% 4.9%;
+        --muted: 280 25% 95%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 280 25% 95%;
+        --accent-foreground: 222.2 84% 4.9%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 280 25% 90%;
+        --input: 280 25% 90%;
+        --ring: 0 84% 60%;
+        --radius: 1.5rem;
+    }
+
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 0 84% 60%;
+        --primary-foreground: 222.2 84% 4.9%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 0 84% 60%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-feature-settings: "rlig" 1, "calt" 1;
+    }
+}
+
+/* custom wellnessgrid styles */
+.wellness-gradient {
+    background-color: #faf7f7;
+    background-image: linear-gradient(to bottom, #fff5f5, #faf7f7);
+}
+
+.wellness-card {
+    @apply bg-white border border-gray-100 rounded-3xl shadow-sm;
+}
+
+.wellness-button-primary {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium rounded-full transition-colors;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.wellness-button-secondary {
+    @apply bg-secondary hover:bg-secondary/80 text-gray-700 font-medium rounded-full transition-colors border border-gray-200;
+}
+
+.wellness-feature-card {
+    @apply bg-white rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow;
+}
+
+.wellness-icon-container {
+    @apply w-12 h-12 rounded-2xl flex items-center justify-center;
+}
+

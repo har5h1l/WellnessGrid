@@ -45,6 +45,7 @@ interface UserDataSummary {
         conditions: string[];
         age: number | null;
         goals: string[];
+        medications: string[];
     };
     activityData?: {
         recentActivities: string[];
@@ -129,11 +130,13 @@ export class QueryContextAnalyzer {
             requirements.timeframe = 'all';
         }
 
-        // if no specific data type identified, default to needing health profile and glucose
+        // ALWAYS include health profile - critical for understanding user's conditions (e.g., T1D)
+        requirements.needsHealthProfile = true;
+        
+        // if no specific data type identified, default to also needing glucose
         if (!requirements.needsGlucoseData && !requirements.needsMedicationData && 
             !requirements.needsMoodData && !requirements.needsSymptomData && 
             !requirements.needsRecentActivity) {
-            requirements.needsHealthProfile = true;
             requirements.needsGlucoseData = true; // most health questions relate to glucose for T1D
         }
 
@@ -395,20 +398,37 @@ export class QueryContextAnalyzer {
             .eq('user_id', userId)
             .single();
 
+        // fetch health conditions directly from health_conditions table (no separate junction table)
         const { data: conditions, error: conditionsError } = await this.supabase
-            .from('user_health_conditions')
-            .select('condition_id')
-            .eq('user_id', userId);
+            .from('health_conditions')
+            .select('name')
+            .eq('user_id', userId)
+            .eq('is_active', true);
+
+        if (conditionsError) {
+            console.error('Error fetching health conditions:', conditionsError);
+        }
 
         const { data: goals, error: goalsError } = await this.supabase
             .from('user_goals')
             .select('goal')
             .eq('user_id', userId);
 
+        // fetch medications from medications table
+        const { data: medications, error: medicationsError } = await this.supabase
+            .from('medications')
+            .select('name')
+            .eq('user_id', userId);
+
+        if (medicationsError) {
+            console.error('Error fetching medications:', medicationsError);
+        }
+
         return {
-            conditions: conditions?.map(c => c.condition_id) || [],
+            conditions: conditions?.map(c => c.name).filter(Boolean) || [],
             age: profile?.date_of_birth ? new Date().getFullYear() - new Date(profile.date_of_birth).getFullYear() : null,
-            goals: goals?.map(g => g.goal).filter(Boolean) || []
+            goals: goals?.map(g => g.goal).filter(Boolean) || [],
+            medications: medications?.map(m => m.name).filter(Boolean) || []
         };
     }
 
@@ -483,9 +503,10 @@ export class QueryContextAnalyzer {
         }
 
         if (summary.healthProfile) {
-            const { conditions, age, goals } = summary.healthProfile;
+            const { conditions, age, goals, medications } = summary.healthProfile;
             parts.push(`HEALTH PROFILE:
 - Conditions: ${conditions.join(', ') || 'None'}
+- Medications: ${medications.join(', ') || 'None'}
 - Age: ${age || 'N/A'}
 - Goals: ${goals.join(', ') || 'None'}`);
         }

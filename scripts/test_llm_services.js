@@ -45,7 +45,7 @@ async function testGeminiAPI() {
   try {
     const { GoogleGenerativeAI } = require('@google/generative-ai')
     const geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const model = geminiClient.getGenerativeModel({ model: "gemini-1.5-pro" })
+    const model = geminiClient.getGenerativeModel({ model: "gemini-2.5-flash" })
     
     console.log('🔄 Testing Gemini with simple JSON prompt...')
     const prompt = 'Return only valid JSON: {"test": "gemini_success", "status": "working"}'

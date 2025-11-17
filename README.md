@@ -1,217 +1,372 @@
-# WellnessGrid App 🏥
+# WellnessGrid 🏥
 
-A comprehensive health and wellness tracking application built with Next.js, TypeScript, and Supabase.
+> **Empowering teens to take control of their health journey**
 
-## 🚀 Quick Start
+A comprehensive health tracking and AI wellness platform designed specifically for teenagers managing chronic conditions like Type 1 Diabetes. WellnessGrid combines intuitive health tracking tools with AI-powered insights to help teens stay on top of their wellness.
+
+---
+
+## 🎯 Quick Links
+
+- **[Live Demo](https://your-demo-url.vercel.app)** - Try the demo version (no signup required)
+- **[Demo Documentation](./demo/)** - Learn about the demo setup
+- **[Full Documentation](./docs/)** - Detailed guides for the production system
+
+---
+
+## 🚀 About This Project
+
+WellnessGrid was created to address a real need: teenagers with chronic health conditions often struggle with managing their health data across multiple apps and sources. This platform brings everything together in one place with a teen-friendly interface and AI assistance.
+
+### The Problem
+- Health tracking apps are often designed for adults
+- Teens need simplified, engaging interfaces
+- Managing chronic conditions requires consistent tracking and insights
+- Medical information can be overwhelming and hard to understand
+
+### Our Solution
+WellnessGrid provides:
+- **Intuitive tracking tools** for glucose, medications, sleep, mood, nutrition, and more
+- **AI health assistant** trained on medical knowledge to answer questions
+- **Automated insights** that identify patterns and trends
+- **Teen-focused design** that's modern, fast, and mobile-friendly
+- **Privacy-first approach** with secure data storage
+
+---
+
+## 📺 Demo Version
+
+**For CAC/Hack Club Judges and Evaluators:**
+
+We've created a standalone demo version that showcases WellnessGrid's features without requiring any backend setup or API keys. The demo uses mock data and simulated responses.
+
+### Try the Demo
+
+1. **Online**: Visit [your-demo-url.vercel.app](https://your-demo-url.vercel.app)
+2. **Run Locally**: See [demo/README.md](./demo/README.md) for instructions
+
+### What's in the Demo
+
+- ✅ Interactive dashboard with health metrics
+- ✅ AI chat assistant with realistic responses
+- ✅ Health analytics and trend visualization
+- ✅ Sample health records
+- ✅ Mobile-responsive design
+- ✅ No API keys or setup required
+
+### Demo vs Production
+
+| Feature | Demo Version | Production Version |
+|---------|-------------|-------------------|
+| Data Storage | Hardcoded JSON | Supabase PostgreSQL |
+| AI Responses | Keyword matching | BioMistral + RAG system |
+| Authentication | None (demo user) | Supabase Auth |
+| Real-time Sync | No | Yes |
+| Data Persistence | No | Yes |
+| Medical Knowledge | Pre-written responses | 1000+ medical documents via RAG |
+| External APIs | None | Multiple LLM services |
+
+---
+
+## 🏗️ Production System Architecture
+
+The full WellnessGrid system is a sophisticated health platform with enterprise-grade features.
+
+### Tech Stack
+
+**Frontend:**
+- Next.js 15 (React 19)
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- Progressive Web App (PWA)
+
+**Backend:**
+- Supabase (PostgreSQL, Auth, Storage)
+- Flask API server for RAG system
+- Python + PubMedBERT embeddings
+- BioMistral 7B medical AI model
+
+**AI/ML:**
+- RAG (Retrieval-Augmented Generation)
+- PubMedBERT for medical document embeddings
+- BioMistral 7B for medical response generation
+- Gemini API for prompt enhancement
+- OpenRouter as LLM fallback
+
+### Key Features
+
+#### 1. Health Tracking Tools
+- **Glucose Tracker** - Blood sugar monitoring with trend analysis
+- **Medication Logger** - Track doses, times, and adherence
+- **Sleep Tracker** - Monitor sleep duration and quality
+- **Mood Tracker** - Emotional wellness monitoring
+- **Nutrition Tracker** - Food intake and carb counting
+- **Symptom Tracker** - Log symptoms and severity
+- **Vital Signs** - Blood pressure, heart rate, temperature
+- **Hydration Tracker** - Daily water intake
+
+#### 2. AI Health Assistant
+- Chat interface with medical AI
+- RAG system with 1000+ medical documents
+- Context-aware responses based on user health data
+- Multi-turn conversations with session memory
+- Medical terminology simplified for teens
+
+#### 3. Smart Analytics
+- Automated health insights
+- Pattern recognition across metrics
+- Trend visualization
+- Correlation analysis (e.g., sleep vs glucose)
+- Wellness score calculation
+
+#### 4. Data Management
+- Secure health record storage
+- Document upload and organization
+- Export capabilities
+- Privacy controls
+
+---
+
+## 🔧 Development Setup
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Python 3.10+ (for RAG system)
+- Supabase account (free tier works)
+- API keys (see below)
+
+### Environment Variables
+
+Create a `.env.local` file:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# LLM Services
+GEMINI_API_KEY=your_google_gemini_api_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+
+# Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+FLASK_API_URL=http://localhost:5000
+```
+
+**⚠️ SECURITY**: Never commit API keys to Git. Use `.env.local` for local development and secure environment variable management in production.
+
+### Installation
 
 ```bash
-# Install dependencies
+# Install frontend dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env.local
+# Set up Python environment for RAG system
+cd scripts/data-processing
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
 
-# Run development server
+# Set up database
+# Follow docs/supabase-setup.md for detailed instructions
+```
+
+### Running the Development Server
+
+```bash
+# Frontend (Next.js)
 npm run dev
+
+# Backend RAG server (separate terminal)
+cd api-servers
+python enhanced_flask_server.py
 ```
 
-## 📁 Project Structure
+Access the app at `http://localhost:3001`
 
-```
-├── app/                    # Next.js app router pages
-├── components/             # React components
-│   ├── ui/                # Reusable UI components
-│   └── ...               # Feature-specific components
-├── lib/                   # Utilities and shared logic
-│   ├── database/         # Database schemas and types
-│   ├── store/           # State management
-│   └── types/           # TypeScript type definitions
-├── docs/                  # 📚 Documentation
-│   ├── supabase-setup.md
-│   ├── tools-implementation.md
-│   ├── rag-upgrade-guide.md
-│   └── archive/         # Deprecated docs
-├── notebooks/             # 📓 Jupyter notebooks
-│   └── query_rag_system.ipynb
-├── scripts/               # 🐍 Python scripts
-│   └── embed_documents.py
-├── tests/                 # 🧪 Test files
-├── public/               # Static assets
-└── styles/               # Global styles
-```
-
-## 🏗️ Architecture
-
-- **Frontend**: Next.js 14 with TypeScript
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **AI/ML**: RAG system with PubMedBERT embeddings
-- **State Management**: Custom React Context
-- **Styling**: Tailwind CSS + shadcn/ui
-
-## 🔧 Key Features
-
-- 📊 Health tracking tools (sleep, nutrition, mood, etc.)
-- 🤖 AI-powered medical chat assistant
-- 📱 Responsive mobile-first design
-- 🔐 Secure authentication and data storage
-- 📈 Health analytics and insights
-- 📚 Medical knowledge base with RAG
+---
 
 ## 📚 Documentation
 
-Visit the [`docs/`](./docs/) directory for detailed setup guides:
+Detailed guides are available in the `/docs` directory:
 
-- [Supabase Setup](./docs/supabase-setup.md)
-- [Tools Implementation](./docs/tools-implementation.md)
-- [RAG System Guide](./docs/rag-upgrade-guide.md)
+- **[Supabase Setup](./docs/supabase-setup.md)** - Database configuration
+- **[LLM Integration](./docs/llm-integration-setup.md)** - AI setup guide
+- **[Tools Implementation](./docs/tools-implementation.md)** - Health tracking tools
+- **[RAG System Guide](./docs/rag-upgrade-guide.md)** - Medical knowledge base
+
+---
+
+## 🚀 Deployment
+
+### Demo Version
+The demo is designed for easy deployment to platforms like Vercel or Netlify. See [demo/README.md](./demo/README.md).
+
+### Production Version
+
+**Frontend:**
+- Deploy to Vercel (recommended for Next.js)
+- Set environment variables in platform dashboard
+- Configure custom domain
+
+**Backend:**
+- Flask RAG server can run on Railway, Heroku, or any VPS
+- Requires Python 3.10+ and GPU for optimal performance
+- BioMistral model requires significant compute resources
+
+**Database:**
+- Supabase handles hosting and scaling
+- Configure Row Level Security policies
+- Set up automated backups
+
+---
+
+## 🔒 Security & Privacy
+
+- All health data is encrypted at rest and in transit
+- Supabase Row Level Security enforces data access controls
+- API keys are never exposed to the client
+- No third-party tracking or analytics that compromise privacy
+- HIPAA-compliance considerations in progress
+
+---
+
+## 🎓 For CAC/Hack Club Certification
+
+This project demonstrates:
+
+1. **Complex Architecture**: Full-stack app with multiple services
+2. **AI/ML Integration**: RAG system with medical AI models
+3. **Real-world Impact**: Addresses genuine need for teen health management
+4. **Production-ready Code**: TypeScript, testing, documentation
+5. **Security Best Practices**: Environment variables, authentication, encryption
+6. **Scalability**: Database design, API architecture, caching strategies
+
+### Project Highlights
+
+- **1000+ medical documents** embedded in RAG system
+- **Multiple AI models** working together
+- **Real-time insights** from health data
+- **Mobile-responsive PWA** that works offline
+- **Comprehensive documentation** for reproducibility
+
+---
 
 ## 🧪 Testing
 
 ```bash
-# Run development server
-npm run dev
-
-# Set up medical database
-python scripts/embed_documents.py
+# Run frontend tests
+npm test
 
 # Test API endpoints
-npx ts-node tests/test-ask-api.ts
+node tests/test-api.js
 
-# Test Supabase connection
+# Test database connection
 npx ts-node tests/test-supabase.ts
 ```
 
+---
+
 ## 🤝 Contributing
+
+We welcome contributions! This project is designed to be a learning resource and a real tool for teens.
+
+### Areas for Contribution
+
+- Additional health tracking tools
+- UI/UX improvements
+- Expanded medical knowledge base
+- Internationalization
+- Accessibility enhancements
+- Mobile app version (React Native)
+
+### Development Guidelines
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+3. Write clean, documented code
+4. Follow existing code style
+5. Test your changes
+6. Submit a pull request
+
+---
+
+## 📝 Project Status
+
+**Current Version**: 1.0.0 (Demo Ready)
+
+- ✅ Core health tracking features
+- ✅ AI chat assistant with RAG
+- ✅ Analytics and insights
+- ✅ Mobile-responsive design
+- ✅ Demo version for showcasing
+- 🚧 Advanced analytics (in progress)
+- 🚧 Social features (planned)
+- 🚧 Integration with wearables (planned)
+- 🚧 Telemedicine features (planned)
+
+---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see LICENSE file for details.
 
-
-
-### Run Tests
-```bash
-pnpm test
-# or
-npm test
-```
-
-### API Testing
-Test Flask backend integration:
-```bash
-node examples/test-flask-api.js
-```
-
-Test Supabase connection:
-```bash
-node lib/test-supabase.ts
-```
-
-## 📊 Development
-
-### Available Scripts
-```bash
-pnpm dev          # Start development server
-pnpm build        # Build for production
-pnpm start        # Start production server
-pnpm lint         # Run ESLint
-pnpm type-check   # TypeScript type checking
-```
-
-### Code Quality
-- TypeScript for type safety
-- ESLint for code quality
-- Prettier for consistent formatting
-- Husky for pre-commit hooks
-
-## 🚀 Deployment
-
-### Production Build
-```bash
-pnpm build
-pnpm start
-```
-
-### Environment Variables (Production)
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_production_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_supabase_key
-FLASK_API_URL=your_production_flask_backend_url
-```
-**⚠️ Security Note:** Use secure environment variable management in production (e.g., Vercel Environment Variables, AWS Secrets Manager).
-
-### Deployment Platforms
-- **Vercel** - Recommended for Next.js apps
-- **Netlify** - Alternative hosting platform
-- **Self-hosted** - Docker containerization available
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow TypeScript best practices
-- Use conventional commit messages
-- Add tests for new features
-- Update documentation as needed
-
-## 📝 Documentation
-
-- [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) - Database setup and configuration
-- [`LLM_INTEGRATION.md`](./LLM_INTEGRATION.md) - AI backend integration guide
-- [`FLASK_BACKEND_SETUP.md`](./FLASK_BACKEND_SETUP.md) - Flask server setup
-- [`TOOLS_IMPLEMENTATION.md`](./TOOLS_IMPLEMENTATION.md) - Health tracking tools guide
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Database Connection Errors**
-- Verify environment variables are properly configured
-- Check database connection and permissions
-- Ensure user authentication is working
-
-**AI Chat Not Working**
-- Confirm backend services are accessible
-- Check network connectivity and configurations
-- Verify service dependencies are running
-
-**Build Errors**
-- Clear `node_modules` and reinstall dependencies
-- Check TypeScript errors with `pnpm type-check`
-- Verify all required environment variables are set
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
 
 ## 🙏 Acknowledgments
 
-- **Medical AI Models**: Microsoft BioGPT, BioBERT by DMIS Lab
-- **UI Components**: Shadcn/ui, Radix UI
+- **Medical AI Models**: BioMistral (HuggingFace), PubMedBERT (Microsoft)
+- **UI Components**: shadcn/ui, Radix UI
 - **Backend Services**: Supabase team
-- **Community**: All contributors and testers
+- **Inspiration**: Every teenager managing a chronic condition
 
-## 📞 Support
+---
 
-- **Issues**: GitHub Issues for bug reports and feature requests
-- **Discussions**: GitHub Discussions for community support
-- **Documentation**: Check the docs folder for detailed guides
+## 📞 Contact & Support
+
+- **Issues**: Use GitHub Issues for bug reports
+- **Discussions**: GitHub Discussions for questions
+- **Documentation**: Check `/docs` directory
+- **Demo**: Visit the live demo for quick overview
 
 ---
 
 **Made with ❤️ for teen health empowerment**
 
-*WellnessGrid - Taking control of your health journey, one day at a time.* 
+*WellnessGrid - Because managing your health should be as easy as checking social media.*
+
+---
+
+## 🗂️ Repository Structure
+
+```
+WellnessGrid App/
+├── app/                     # Next.js app directory (pages)
+├── components/              # React components
+├── lib/                     # Utilities, services, types
+├── docs/                    # Documentation
+├── demo/                    # 🎯 Demo version (for judges)
+│   ├── backend/            # Mock API server
+│   └── frontend/           # Simplified Next.js frontend
+├── api-servers/            # Flask RAG server
+├── scripts/                # Database & data processing
+├── public/                 # Static assets
+└── README.md              # You are here!
+```
+
+---
+
+## 💡 Quick Start Paths
+
+**For Judges/Evaluators:**
+→ Try the [demo version](./demo/README.md) (5 minutes setup)
+
+**For Developers:**
+→ Follow the [development setup](#development-setup) (30 minutes)
+
+**For Contributors:**
+→ Read [contributing guidelines](#contributing) and pick an issue
+
+**For Users:**
+→ Visit the live demo at [your-demo-url.vercel.app](https://your-demo-url.vercel.app)

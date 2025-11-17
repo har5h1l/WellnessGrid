@@ -151,8 +151,8 @@ export class LLMService {
     }
 
     try {
-      // Use Gemini Pro 1.5 for enhanced capabilities
-      const model = geminiClient.getGenerativeModel({ model: "gemini-1.5-pro" });
+      // Use Gemini 2.5 Flash for enhanced capabilities (best price-performance model)
+      const model = geminiClient.getGenerativeModel({ model: "gemini-2.5-flash" });
       
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -162,7 +162,7 @@ export class LLMService {
         success: true,
         content: text.trim(),
         service: 'gemini',
-        model: 'gemini-1.5-pro'
+        model: 'gemini-2.5-flash'
       };
     } catch (error: any) {
       console.error('Gemini API error:', error);
@@ -210,8 +210,8 @@ export class LLMService {
     }
 
     try {
-      // Use Gemini Pro 1.5 for enhanced capabilities
-      const model = geminiClient.getGenerativeModel({ model: "gemini-1.5-pro" });
+      // Use Gemini 2.5 Flash for enhanced capabilities (best price-performance model)
+      const model = geminiClient.getGenerativeModel({ model: "gemini-2.5-flash" });
       
       // Start a chat session with history
       const chat = model.startChat({
@@ -228,7 +228,7 @@ export class LLMService {
         success: true,
         content: text.trim(),
         service: 'gemini',
-        model: 'gemini-1.5-pro'
+        model: 'gemini-2.5-flash'
       };
     } catch (error: any) {
       console.error('Gemini API error with history:', error);
@@ -273,12 +273,25 @@ export class LLMService {
     }
 
     try {
-      // Use current free models on OpenRouter (updated Aug 2025)
+      // Use current free models on OpenRouter (updated Oct 2025)
       const freeModels = [
         "deepseek/deepseek-chat-v3.1:free",
         "openai/gpt-oss-120b:free",
         "openai/gpt-oss-20b:free",
-        "z-ai/glm-4.5-air:free"
+        "z-ai/glm-4.5-air:free",
+        "meta-llama/llama-3.3-8b-instruct:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "microsoft/phi-3.5-mini-instruct:free",
+        "microsoft/phi-3.5-medium-instruct:free",
+        "google/gemini-2.0-flash-exp:free",
+        "google/gemini-2.5-flash:free",
+        "anthropic/claude-3.5-sonnet:free",
+        "anthropic/claude-3.5-haiku:free",
+        "qwen/qwen-2.5-7b-instruct:free",
+        "qwen/qwen-2.5-14b-instruct:free",
+        "qwen/qwen-2.5-32b-instruct:free",
+        "mistralai/mistral-7b-instruct:free",
+        "mistralai/mixtral-8x7b-instruct:free"
       ];
       
       let lastError = null;
@@ -342,12 +355,25 @@ export class LLMService {
         content: msg.content
       }));
 
-      // Use current free models on OpenRouter (updated Aug 2025)
+      // Use current free models on OpenRouter (updated Oct 2025)
       const freeModels = [
         "deepseek/deepseek-chat-v3.1:free",
         "openai/gpt-oss-120b:free",
         "openai/gpt-oss-20b:free",
-        "z-ai/glm-4.5-air:free"
+        "z-ai/glm-4.5-air:free",
+        "meta-llama/llama-3.3-8b-instruct:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "microsoft/phi-3.5-mini-instruct:free",
+        "microsoft/phi-3.5-medium-instruct:free",
+        "google/gemini-2.0-flash-exp:free",
+        "google/gemini-2.5-flash:free",
+        "anthropic/claude-3.5-sonnet:free",
+        "anthropic/claude-3.5-haiku:free",
+        "qwen/qwen-2.5-7b-instruct:free",
+        "qwen/qwen-2.5-14b-instruct:free",
+        "qwen/qwen-2.5-32b-instruct:free",
+        "mistralai/mistral-7b-instruct:free",
+        "mistralai/mixtral-8x7b-instruct:free"
       ];
       
       let lastError = null;

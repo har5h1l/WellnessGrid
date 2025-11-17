@@ -1,0 +1,243 @@
+{
+    "userProfile": {
+        "id": "demo-user-001",
+        "name": "Sarah Chen",
+        "age": 16,
+        "email": "sarah.demo@wellnessgrid.com",
+        "conditions": [
+            {
+                "id": "condition-001",
+                "name": "Type 1 Diabetes",
+                "diagnosedDate": "2021-03-15",
+                "severity": "moderate",
+                "notes": "Well-managed with insulin therapy"
+            }
+        ],
+        "profileComplete": true,
+        "joinDate": "2024-01-10"
+    },
+    "dashboardData": {
+        "wellnessScore": 78,
+        "lastUpdated": "2024-11-17T10:30:00Z",
+        "metrics": {
+            "sleep": {
+                "averageHours": 7.5,
+                "quality": "good",
+                "trend": "stable"
+            },
+            "mood": {
+                "current": "happy",
+                "averageScore": 4.2,
+                "trend": "improving"
+            },
+            "glucose": {
+                "current": 110,
+                "average": 125,
+                "trend": "stable",
+                "unit": "mg/dL"
+            },
+            "activity": {
+                "dailySteps": 8500,
+                "weeklyAverage": 7200,
+                "trend": "improving"
+            }
+        },
+        "recentEntries": [
+            {
+                "id": "entry-001",
+                "toolId": "glucose",
+                "toolName": "Glucose Tracker",
+                "timestamp": "2024-11-17T09:00:00Z",
+                "value": 110,
+                "unit": "mg/dL",
+                "notes": "Before breakfast"
+            },
+            {
+                "id": "entry-002",
+                "toolId": "mood",
+                "toolName": "Mood Tracker",
+                "timestamp": "2024-11-17T08:30:00Z",
+                "value": "happy",
+                "score": 4,
+                "notes": "Feeling great this morning!"
+            },
+            {
+                "id": "entry-003",
+                "toolId": "sleep",
+                "toolName": "Sleep Tracker",
+                "timestamp": "2024-11-17T07:00:00Z",
+                "value": 8,
+                "unit": "hours",
+                "quality": "good",
+                "notes": "Slept well"
+            },
+            {
+                "id": "entry-004",
+                "toolId": "medication",
+                "toolName": "Medication Logger",
+                "timestamp": "2024-11-17T08:00:00Z",
+                "value": "Insulin - 12 units",
+                "notes": "Morning dose"
+            }
+        ],
+        "upcomingReminders": [
+            {
+                "id": "reminder-001",
+                "title": "Evening Glucose Check",
+                "time": "18:00",
+                "type": "glucose"
+            },
+            {
+                "id": "reminder-002",
+                "title": "Evening Insulin",
+                "time": "18:30",
+                "type": "medication"
+            }
+        ]
+    },
+    "analytics": {
+        "insights": [
+            {
+                "id": "insight-001",
+                "title": "Blood Sugar Stability Improving",
+                "description": "Your glucose levels have been more stable over the past week. Keep up the consistent meal timing and insulin dosing!",
+                "type": "positive",
+                "priority": "high",
+                "date": "2024-11-17",
+                "category": "glucose"
+            },
+            {
+                "id": "insight-002",
+                "title": "Great Sleep Pattern",
+                "description": "You've maintained 7-8 hours of sleep for 5 consecutive nights. This consistency helps with blood sugar management.",
+                "type": "positive",
+                "priority": "medium",
+                "date": "2024-11-16",
+                "category": "sleep"
+            },
+            {
+                "id": "insight-003",
+                "title": "Mood-Activity Connection",
+                "description": "Your mood scores are higher on days with more physical activity. Consider staying active!",
+                "type": "observation",
+                "priority": "medium",
+                "date": "2024-11-15",
+                "category": "mood"
+            }
+        ],
+        "trends": {
+            "glucose": {
+                "weeklyData": [120, 118, 125, 122, 115, 128, 125],
+                "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                "trend": "stable",
+                "change": -2.1
+            },
+            "sleep": {
+                "weeklyData": [7, 7.5, 8, 7, 8, 7.5, 8],
+                "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                "trend": "improving",
+                "change": 0.5
+            },
+            "mood": {
+                "weeklyData": [4, 4, 3, 5, 4, 5, 4],
+                "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                "trend": "stable",
+                "change": 0
+            }
+        }
+    },
+    "healthRecords": [
+        {
+            "id": "record-001",
+            "type": "Lab Results",
+            "title": "HbA1c Test",
+            "date": "2024-10-15",
+            "provider": "City Medical Center",
+            "summary": "HbA1c: 6.8% (Good control)",
+            "details": "Your hemoglobin A1c level indicates good diabetes management over the past 3 months."
+        },
+        {
+            "id": "record-002",
+            "type": "Appointment",
+            "title": "Endocrinology Check-up",
+            "date": "2024-10-15",
+            "provider": "Dr. Martinez",
+            "summary": "Routine diabetes management visit",
+            "details": "Blood sugar control is improving. Continue current insulin regimen. Next appointment in 3 months."
+        },
+        {
+            "id": "record-003",
+            "type": "Prescription",
+            "title": "Insulin Prescription Renewal",
+            "date": "2024-10-15",
+            "provider": "Dr. Martinez",
+            "summary": "Insulin glargine (long-acting)",
+            "details": "20 units once daily at bedtime"
+        }
+    ],
+    "chatResponses": {
+        "keywords": {
+            "diabetes": [
+                "Managing Type 1 diabetes involves regular blood sugar monitoring, insulin therapy, healthy eating, and regular physical activity. Based on your tracking data, your glucose levels have been stable around 125 mg/dL, which shows good management. Keep maintaining your current routine of checking your blood sugar regularly and taking insulin as prescribed.",
+                "Type 1 diabetes requires consistent care, but with the right approach, you can live a full and active life. Your recent glucose readings show you're doing a great job! Remember to:\n\n1. Check blood sugar before meals and at bedtime\n2. Take insulin as prescribed\n3. Maintain regular meal times\n4. Stay physically active\n5. Get adequate sleep (7-9 hours)\n\nYour current wellness score of 78 reflects your dedication to managing your health.",
+                "Great question! For Type 1 diabetes management, consistency is key. Looking at your health data, I notice you've been very consistent with your tracking, which is excellent. Your average glucose of 125 mg/dL is within a good range. Continue with your current insulin regimen and meal planning."
+            ],
+            "glucose": [
+                "Your recent glucose reading of 110 mg/dL before breakfast is excellent! This is within the target range of 80-130 mg/dL before meals. Your average over the past week has been 125 mg/dL, showing good stability.\n\nTips to maintain this:\n- Continue checking before meals and at bedtime\n- Note any patterns with food or activity\n- Stay hydrated\n- Keep consistent meal times",
+                "Blood glucose monitoring is crucial for diabetes management. Based on your tracking, you're doing very well with an average of 125 mg/dL and stable readings. Remember to check:\n\n• Before meals (target: 80-130 mg/dL)\n• 2 hours after meals (target: <180 mg/dL)\n• Before bed\n• Before and after exercise\n\nYour consistency with tracking is helping you maintain good control!",
+                "Your glucose trends show excellent stability this week. The slight variations you're seeing are normal and your readings remain within healthy ranges. Keep up with your current management approach!"
+            ],
+            "insulin": [
+                "Insulin timing is very important for managing Type 1 diabetes. Based on your medication logs, you're taking your morning dose consistently around 8 AM, which is great!\n\nKey insulin tips:\n- Take long-acting insulin at the same time daily\n- Take rapid-acting insulin 15 minutes before meals\n- Don't skip doses\n- Store insulin properly (refrigerate unopened vials)\n- Check expiration dates\n\nYour current dose of 12 units in the morning appears to be working well based on your glucose levels.",
+                "Great job staying consistent with your insulin therapy! Your morning dose of 12 units, combined with your stable glucose readings, shows your regimen is effective. Remember to rotate injection sites to prevent lipohypertrophy, and always check your blood sugar before taking insulin.",
+                "Insulin management requires attention to timing and dosage. Your medication logs show excellent adherence. If you ever experience unexplained high or low blood sugars, contact your healthcare provider before adjusting your dose."
+            ],
+            "sleep": [
+                "Your sleep tracking shows excellent consistency! You've averaged 7.5 hours of sleep, which is perfect for your age group. Good sleep is especially important for diabetes management because:\n\n• It helps regulate blood sugar levels\n• Improves insulin sensitivity\n• Reduces stress hormones\n• Supports overall health and mood\n\nYour recent pattern of 7-8 hours per night is ideal. Keep maintaining this routine!",
+                "Sleep quality directly impacts blood glucose control. Your consistent 7-8 hours of sleep per night is contributing to your stable glucose readings. Try to maintain similar sleep and wake times, even on weekends, for optimal diabetes management.",
+                "Excellent work on your sleep schedule! The correlation between your good sleep and stable glucose levels is not a coincidence. Quality sleep helps your body use insulin more effectively."
+            ],
+            "mood": [
+                "Your mood tracking shows you're averaging 4.2 out of 5, with a trend toward improvement. That's wonderful! I've noticed a pattern in your data: your mood scores are higher on days when you're more physically active. This is a great insight!\n\nManaging a chronic condition like diabetes can be challenging, but you're doing an excellent job. Remember:\n- It's normal to have varied emotions\n- Physical activity can boost mood\n- Good diabetes management (like you're doing) can improve how you feel\n- Don't hesitate to talk to someone if you're feeling overwhelmed",
+                "Your mood scores have been consistently positive this week! This is great to see. Living with Type 1 diabetes can be stressful at times, but your positive outlook and excellent self-management are helping. Keep tracking your mood - it helps identify patterns and what works best for you.",
+                "The connection between physical health and mental well-being is strong. Your recent mood improvements align with your stable glucose levels and good sleep patterns. You're doing a fantastic job managing all aspects of your health!"
+            ],
+            "exercise": [
+                "Physical activity is great for diabetes management! Your recent tracking shows 8,500 steps today and a weekly average of 7,200 steps. Exercise helps:\n\n• Lower blood glucose levels\n• Improve insulin sensitivity\n• Boost mood and energy\n• Support overall health\n\nTips for exercise with diabetes:\n- Check glucose before and after activity\n- Keep fast-acting carbs handy\n- Stay hydrated\n- Wear your medical ID\n\nYour activity levels are contributing to your wellness score of 78!",
+                "Great job staying active! Your step count shows you're moving regularly, which is excellent for blood sugar control. I notice your mood scores are higher on more active days - that's a powerful connection to be aware of!",
+                "Exercise is one of the best things you can do for diabetes management. Your weekly average of 7,200 steps shows good consistency. Try to aim for at least 30 minutes of moderate activity most days of the week."
+            ],
+            "food": [
+                "Nutrition is a cornerstone of diabetes management. For Type 1 diabetes, it's about balancing your food intake with insulin doses. Key principles:\n\n• Count carbohydrates for insulin dosing\n• Eat consistent meal times (helps with glucose stability)\n• Include protein and healthy fats\n• Choose whole grains over refined carbs\n• Eat plenty of vegetables\n• Stay hydrated\n\nYour stable glucose readings suggest you're doing well with meal planning. Keep it up!",
+                "Meal timing and consistency are important for managing blood sugar. Your glucose data shows good stability, which indicates you're likely eating at regular times and making healthy choices. Consider keeping a food diary along with your glucose readings to identify patterns.",
+                "Nutrition management with Type 1 diabetes requires planning, but you're clearly handling it well based on your glucose stability. Remember to match your rapid-acting insulin to your carbohydrate intake at meals."
+            ],
+            "stress": [
+                "Stress can affect blood glucose levels, so managing stress is an important part of diabetes care. Your wellness data shows good overall stability, which suggests you're managing stress effectively.\n\nStress management techniques:\n- Regular physical activity (you're already doing this!)\n- Adequate sleep (your 7.5 hour average is excellent)\n- Deep breathing exercises\n- Talking with friends or family\n- Hobbies and relaxation time\n- Staying organized with your diabetes management\n\nYour consistent tracking and management routine likely helps reduce stress by giving you a sense of control.",
+                "Managing a chronic condition can be stressful, but you're doing an excellent job! Your stable glucose levels and positive mood scores indicate you're coping well. Remember that it's okay to ask for help when you need it - whether from healthcare providers, family, or friends.",
+                "Stress management is crucial for overall health and diabetes control. Your tracking shows you're maintaining balance well. Continue with your current self-care routine, and don't hesitate to reach out to your healthcare team if you're feeling overwhelmed."
+            ],
+            "symptoms": [
+                "If you're experiencing any diabetes-related symptoms like frequent urination, excessive thirst, unexplained fatigue, or blurred vision, it's important to check your blood glucose and contact your healthcare provider. Your recent readings have been stable, but always trust your body and check if something feels off.",
+                "Common symptoms to watch for with diabetes include high blood sugar symptoms (thirst, frequent urination, fatigue) and low blood sugar symptoms (shakiness, sweating, confusion, rapid heartbeat). Your current glucose control appears good based on your data. Always keep fast-acting carbs available for treating lows.",
+                "Your tracking shows stable glucose levels, which is great! Continue monitoring how you feel and log any symptoms along with your glucose readings. This helps identify patterns and ensures you're staying in good control."
+            ],
+            "medication": [
+                "Your medication tracking shows excellent adherence! You've been consistently logging your insulin doses, which is crucial for effective diabetes management. Your morning dose of 12 units combined with your stable glucose readings indicates your regimen is working well.\n\nMedication reminders:\n- Never skip doses\n- Store insulin properly (refrigerate unopened)\n- Check expiration dates\n- Rotate injection sites\n- Always have backup supplies\n\nKeep up the great work with your medication routine!",
+                "Consistent medication adherence, like you're demonstrating, is key to managing Type 1 diabetes effectively. Your insulin logs show you're taking your medication regularly, which contributes to your stable glucose levels and wellness score of 78.",
+                "Great job tracking your medications! This habit helps ensure you never miss a dose and allows you to share accurate information with your healthcare provider. Your consistent insulin therapy is reflected in your stable glucose readings."
+            ],
+            "general": [
+                "Hello! I'm here to help you with your health and wellness journey. As someone managing Type 1 diabetes, you're doing an excellent job with tracking and self-care. Your wellness score of 78 reflects your dedication!\n\nI can help you with:\n- Understanding your glucose readings and trends\n- Diabetes management tips\n- Sleep, mood, and activity guidance\n- Interpreting your health insights\n- Answering health questions\n\nWhat would you like to know more about?",
+                "You're doing a fantastic job managing your health! Your consistent tracking, stable glucose levels, and positive trends show real dedication. Is there anything specific about your diabetes management or overall wellness you'd like to discuss?",
+                "I'm here to support your health journey. Based on your data, you're managing Type 1 diabetes very effectively. Your glucose stability, good sleep patterns, and positive mood scores all contribute to your overall wellness. How can I help you today?"
+            ]
+        },
+        "fallback": [
+            "That's a great question. While I can provide general health information, for specific medical advice about your condition, please consult with your healthcare provider. Based on your tracking data, you're doing an excellent job managing your Type 1 diabetes. Is there anything specific about your daily management routine you'd like to discuss?",
+            "I want to make sure I give you accurate information. For questions outside my knowledge base, I recommend speaking with your healthcare team. However, I can see from your wellness data that you're maintaining good control. Your glucose levels are stable and your overall wellness score of 78 is great! What aspect of your health management would you like to explore?",
+            "Thank you for asking. While I aim to provide helpful health information, some questions are best answered by your doctor. What I can tell you is that your recent health tracking shows excellent consistency and good control. Keep up the great work! Is there anything about your tracking data or daily routine you'd like to discuss?"
+        ]
+    }
+}
+
