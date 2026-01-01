@@ -16,9 +16,23 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files - NEVER commit API keys or secrets!
 .env*
 .env.local
+.env.local.backup
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# api keys and secrets (extra safety)
+*secret*
+*key*.json
+*password*.json
+*credential*.json
+config.json
+secrets.json
+api-keys.json
 
 # vercel
 .vercel
@@ -26,7 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.env.*.local
 *.log
 logs/
 
